@@ -1,0 +1,72 @@
+name: Advanced restore-keys Patterns
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Example 1: Multi-level fallback chain
+      # Tries in order:
+      # 1. Exact match for this OS + package-lock hash
+      # 2. Any cache for this OS (most recent)
+      # 3. Any cache from any OS (most recent)
+      - name: Cache with multi-level fallback
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+            npm-
+
+      # Example 2: Branch-aware caching
+      # Prefer cache from same branch, fall back to main branch
+      - name: Cache with branch awareness
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: .next/cache
+          key: nextjs-${{ github.ref }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            nextjs-${{ github.ref }}-
+            nextjs-refs/heads/main-
+            nextjs-
+
+      # Example 3: Version-specific fallback
+      # Try exact Node version first, then major version, then any
+      - name: Cache with version fallback
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.npm
+          key: npm-global-${{ runner.os }}-node${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-global-${{ runner.os }}-node${{ matrix.node-version }}-
+            npm-global-${{ runner.os }}-node20-
+            npm-global-${{ runner.os }}-
+
+      # Example 4: Date-based cache with weekly rotation
+      # Useful for caches that should be fresh but can fallback
+      - name: Cache with weekly rotation
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-week${{ github.run_number / 50 }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-week${{ github.run_number / 50 }}-
+            pip-${{ runner.os }}-
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
