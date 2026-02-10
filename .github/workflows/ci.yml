@@ -169,3 +169,30 @@ jobs:
           fi
           echo "Gzip cache restore successful"
         shell: bash
+
+  ci-success:
+    name: CI Success
+    needs: [build, test-action]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Build: ${{ needs.build.result }}"
+          echo "Test action: ${{ needs.test-action.result }}"
+
+          # Build must succeed
+          if [ "${{ needs.build.result }}" == "failure" ] || [ "${{ needs.build.result }}" == "cancelled" ]; then
+            echo "❌ Build failed or was cancelled"
+            exit 1
+          fi
+          echo "✅ Build passed"
+
+          # Test action must succeed (matrix job)
+          if [ "${{ needs.test-action.result }}" == "failure" ] || [ "${{ needs.test-action.result }}" == "cancelled" ]; then
+            echo "❌ Test action failed or was cancelled"
+            exit 1
+          fi
+          echo "✅ Test action passed"
+
+          echo "✅ All CI jobs passed successfully!"
