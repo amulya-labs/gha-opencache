@@ -52,7 +52,9 @@ export class GCSIndexStore implements IndexStore {
 
       // Get metadata to track generation
       const [metadata] = await this.indexFile.getMetadata();
-      this.generation = metadata.generation ? parseInt(metadata.generation as string, 10) : undefined;
+      this.generation = metadata.generation
+        ? parseInt(metadata.generation as string, 10)
+        : undefined;
 
       // Download content
       const [contents] = await this.indexFile.download();
@@ -105,7 +107,9 @@ export class GCSIndexStore implements IndexStore {
 
       // Update generation after successful save
       const [metadata] = await this.indexFile.getMetadata();
-      this.generation = metadata.generation ? parseInt(metadata.generation as string, 10) : undefined;
+      this.generation = metadata.generation
+        ? parseInt(metadata.generation as string, 10)
+        : undefined;
     } catch (err) {
       // Handle conditional write failure (precondition failed)
       if (err instanceof Error && err.message.includes('conditionNotMet')) {
