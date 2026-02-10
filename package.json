@@ -1,0 +1,56 @@
+{
+  "name": "actions-local-cache",
+  "version": "1.0.0",
+  "description": "Drop-in replacement for actions/cache with local filesystem storage",
+  "main": "dist/restore/index.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "npm run package:restore && npm run package:save && npm run package:restore-only && npm run package:save-only",
+    "package:restore": "ncc build src/restore.ts -o dist/restore --license licenses.txt",
+    "package:save": "ncc build src/save.ts -o dist/save --license licenses.txt",
+    "package:restore-only": "ncc build src/restore-only.ts -o dist/restore-only --license licenses.txt",
+    "package:save-only": "ncc build src/save-only.ts -o dist/save-only --license licenses.txt",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src __tests__ --ext .ts",
+    "lint:fix": "eslint src __tests__ --ext .ts --fix",
+    "format": "prettier --write 'src/**/*.ts' '__tests__/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts' '__tests__/**/*.ts'",
+    "all": "npm run build && npm run lint && npm run format:check && npm run test && npm run package"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rrl-personal-projects/actions-local-cache.git"
+  },
+  "keywords": [
+    "github-actions",
+    "cache",
+    "local-cache"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/glob": "^0.5.0",
+    "@actions/io": "^1.1.3",
+    "proper-lockfile": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vercel/ncc": "^0.38.1",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,47 @@
+name: 'Local Cache'
+description: 'Cache artifacts using local filesystem storage - drop-in replacement for actions/cache'
+author: 'rrl-personal-projects'
+branding:
+  icon: 'archive'
+  color: 'blue'
+
+inputs:
+  key:
+    description: 'An explicit key for restoring and saving the cache'
+    required: true
+  path:
+    description: 'A list of files, directories, and wildcard patterns to cache and restore'
+    required: true
+  restore-keys:
+    description: 'An ordered list of keys to use for restoring stale cache if no cache hit occurred for key. Note `cache-hit` returns false in this case.'
+    required: false
+  fail-on-cache-miss:
+    description: 'Fail the workflow if cache entry is not found'
+    required: false
+    default: 'false'
+  lookup-only:
+    description: 'Check if a cache entry exists for the given input(s) without downloading the cache'
+    required: false
+    default: 'false'
+  save-always:
+    description: 'Run the post step to save the cache even if another step before fails'
+    required: false
+    default: 'false'
+  cache-path:
+    description: 'Base path for local cache storage'
+    required: false
+    default: '/srv/gha-cache/v1'
+
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key'
+  cache-primary-key:
+    description: 'The primary key that was used'
+  cache-matched-key:
+    description: 'The key of the cache that was restored, if any'
+
+runs:
+  using: 'node20'
+  main: 'dist/restore/index.js'
+  post: 'dist/save/index.js'
+  post-if: success()

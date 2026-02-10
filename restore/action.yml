@@ -1,0 +1,41 @@
+name: 'Restore Local Cache'
+description: 'Restore cache from local filesystem storage'
+author: 'rrl-personal-projects'
+branding:
+  icon: 'download'
+  color: 'blue'
+
+inputs:
+  key:
+    description: 'An explicit key for restoring the cache'
+    required: true
+  path:
+    description: 'A list of files, directories, and wildcard patterns to restore'
+    required: true
+  restore-keys:
+    description: 'An ordered list of keys to use for restoring stale cache if no cache hit occurred for key'
+    required: false
+  fail-on-cache-miss:
+    description: 'Fail the workflow if cache entry is not found'
+    required: false
+    default: 'false'
+  lookup-only:
+    description: 'Check if a cache entry exists without downloading'
+    required: false
+    default: 'false'
+  cache-path:
+    description: 'Base path for local cache storage'
+    required: false
+    default: '/srv/gha-cache/v1'
+
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key'
+  cache-primary-key:
+    description: 'The primary key that was used'
+  cache-matched-key:
+    description: 'The key of the cache that was restored, if any'
+
+runs:
+  using: 'node20'
+  main: '../dist/restore-only/index.js'
