@@ -30,13 +30,16 @@ max-cache-size-gb: 20
 ## Local Filesystem Setup
 
 **Create directory:**
+
+Linux/macOS:
 ```bash
-# Linux/macOS
 sudo mkdir -p /srv/gha-cache/v1
 sudo chown -R runner-user:runner-group /srv/gha-cache/v1
 chmod 755 /srv/gha-cache/v1
+```
 
-# Windows (PowerShell as Admin)
+Windows (PowerShell as Admin):
+```powershell
 New-Item -Path "C:\gha-cache\v1" -ItemType Directory -Force
 ```
 
@@ -65,11 +68,15 @@ find /srv/gha-cache/v1 -type f -mtime +30 -delete
 
 **Common workflow config:**
 ```yaml
-storage-provider: s3
-s3-bucket: my-cache-bucket
-env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+- uses: rrl-personal-projects/actions-opencache@v1
+  with:
+    storage-provider: s3
+    s3-bucket: my-cache-bucket
+    path: node_modules
+    key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+  env:
+    AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+    AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
 ```
 
 Provider-specific settings in collapsible sections below.
@@ -224,7 +231,7 @@ jobs:
 **Save:** `key: test-${{ github.run_number }}` **Restore:** `key: test-999, restore-keys: test-`
 
 **Verify storage:**
-- Local: `ls /srv/gha-cache/v1/github.com/owner/repo/archives/`
+- Local: `ls /srv/gha-cache/v1/owner/repo/archives/`
 - S3: `aws s3 ls s3://my-bucket/gha-cache/ --recursive`
 - GCS: `gsutil ls -r gs://my-bucket/gha-cache/`
 

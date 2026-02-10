@@ -32,22 +32,30 @@ Built for **self-hosted runners** with flexible storage options:
 
 **S3-compatible** (MinIO, R2, AWS S3, etc.):
 ```yaml
-storage-provider: s3
-s3-bucket: my-cache-bucket
-s3-endpoint: https://minio.example.com  # omit for AWS S3
-s3-force-path-style: true  # required for MinIO
-env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+- uses: rrl-personal-projects/actions-opencache@v1
+  with:
+    path: node_modules
+    key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+    storage-provider: s3
+    s3-bucket: my-cache-bucket
+    s3-endpoint: https://minio.example.com  # omit for AWS S3
+    s3-force-path-style: true  # required for MinIO
+  env:
+    AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+    AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
 ```
 
 **Google Cloud Storage**:
 ```yaml
-storage-provider: gcs
-gcs-bucket: my-cache-bucket
-gcs-project: my-project
-env:
-  GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY_PATH }}
+- uses: rrl-personal-projects/actions-opencache@v1
+  with:
+    path: node_modules
+    key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+    storage-provider: gcs
+    gcs-bucket: my-cache-bucket
+    gcs-project: my-project
+  env:
+    GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY_PATH }}
 ```
 
 </details>
@@ -70,11 +78,11 @@ env:
 
 **Storage-specific:** See table below or [MIGRATION.md](MIGRATION.md) for detailed configuration
 
-| Storage | Required Inputs | Environment Variables |
-|---------|----------------|----------------------|
-| **local** | `cache-path` (default: `/srv/gha-cache/v1`) | - |
-| **s3** | `s3-bucket` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
-| **gcs** | `gcs-bucket` | `GOOGLE_APPLICATION_CREDENTIALS` (or Workload Identity) |
+| Storage | Required Inputs | Optional Inputs | Environment Variables |
+|---------|----------------|-----------------|----------------------|
+| **local** | - | `cache-path` (default: `/srv/gha-cache/v1`) | - |
+| **s3** | `s3-bucket` | `s3-endpoint`, `s3-region`, `s3-prefix`, `s3-force-path-style` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| **gcs** | `gcs-bucket` | `gcs-project`, `gcs-prefix` | `GOOGLE_APPLICATION_CREDENTIALS` (or Workload Identity) |
 
 **Outputs:** `cache-hit` (bool) • `cache-primary-key` (string) • `cache-matched-key` (string)
 
@@ -97,7 +105,7 @@ env:
 
 Three storage options, all with identical cache semantics:
 
-1. **Local filesystem** (default) - `/srv/gha-cache/v1/github.com/{owner}/{repo}/`
+1. **Local filesystem** (default) - `/srv/gha-cache/v1/{owner}/{repo}/`
 2. **S3-compatible** - AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces
 3. **Google Cloud Storage** - Native GCS with Workload Identity or service account
 
@@ -250,7 +258,7 @@ Debug cache key:
 
 Check local storage:
 ```bash
-ls -la /srv/gha-cache/v1/github.com/owner/repo/
+ls -la /srv/gha-cache/v1/owner/repo/
 ```
 
 Verify restore-keys have no trailing slashes or extra characters.
