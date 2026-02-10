@@ -5,6 +5,7 @@ import {
 } from '../../../src/storage/factory';
 import { LocalStorageProvider } from '../../../src/storage/local/localProvider';
 import { S3StorageProvider } from '../../../src/storage/s3/s3Provider';
+import { GCSStorageProvider } from '../../../src/storage/gcs/gcsProvider';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -23,9 +24,13 @@ describe('storage factory', () => {
       expect(isValidStorageType('custom')).toBe(true);
     });
 
+    it('returns true for gcs', () => {
+      expect(isValidStorageType('gcs')).toBe(true);
+    });
+
     it('returns false for invalid types', () => {
       expect(isValidStorageType('azure')).toBe(false);
-      expect(isValidStorageType('gcs')).toBe(false);
+      expect(isValidStorageType('invalid')).toBe(false);
       expect(isValidStorageType('')).toBe(false);
     });
   });
@@ -70,6 +75,20 @@ describe('storage factory', () => {
       });
 
       expect(provider).toBeInstanceOf(S3StorageProvider);
+    });
+
+    it('creates GCSStorageProvider for gcs type', async () => {
+      const provider = await createStorageProvider({
+        type: 'gcs',
+        owner: 'test-owner',
+        repo: 'test-repo',
+        options: {
+          bucket: 'test-bucket',
+          projectId: 'test-project',
+        },
+      });
+
+      expect(provider).toBeInstanceOf(GCSStorageProvider);
     });
 
     it('passes ttlDays and maxCacheSizeGb to provider', async () => {

@@ -21,6 +21,12 @@ export enum Inputs {
   S3Prefix = 's3-prefix',
   S3ForcePathStyle = 's3-force-path-style',
 
+  // GCS provider options
+  GCSBucket = 'gcs-bucket',
+  GCSProject = 'gcs-project',
+  GCSPrefix = 'gcs-prefix',
+  GCSKeyFile = 'gcs-key-file',
+
   // Common options
   Compression = 'compression',
   CompressionLevel = 'compression-level',

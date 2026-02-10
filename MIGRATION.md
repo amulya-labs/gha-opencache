@@ -198,6 +198,162 @@ env:
 
 </details>
 
+## Google Cloud Storage (GCS) Setup
+
+GCS requires creating a bucket and setting up authentication via service account keys or Workload Identity Federation (recommended).
+
+### Option 1: Service Account Key (Simple)
+
+**1. Create bucket:**
+```bash
+# Create bucket in your GCP project
+gsutil mb -p my-project -l us-central1 gs://my-gha-cache-bucket
+
+# Or using gcloud
+gcloud storage buckets create gs://my-gha-cache-bucket --project=my-project --location=us-central1
+```
+
+**2. Create service account:**
+```bash
+# Create service account
+gcloud iam service-accounts create github-actions-cache \
+  --project=my-project \
+  --display-name="GitHub Actions Cache"
+
+# Grant Storage Object Admin role on the bucket
+gsutil iam ch serviceAccount:github-actions-cache@my-project.iam.gserviceaccount.com:roles/storage.objectAdmin \
+  gs://my-gha-cache-bucket
+
+# Or using gcloud
+gcloud storage buckets add-iam-policy-binding gs://my-gha-cache-bucket \
+  --member=serviceAccount:github-actions-cache@my-project.iam.gserviceaccount.com \
+  --role=roles/storage.objectAdmin
+```
+
+**3. Generate and download key:**
+```bash
+gcloud iam service-accounts keys create gha-cache-key.json \
+  --iam-account=github-actions-cache@my-project.iam.gserviceaccount.com \
+  --project=my-project
+```
+
+**4. Add key to GitHub secrets:**
+- Go to your repository → Settings → Secrets and variables → Actions
+- Create new secret: `GCP_SA_KEY`
+- Paste the entire contents of `gha-cache-key.json`
+
+**5. Configure workflow:**
+```yaml
+- name: Set up GCP credentials
+  run: |
+    echo '${{ secrets.GCP_SA_KEY }}' > ${{ runner.temp }}/gcp-key.json
+    echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/gcp-key.json" >> $GITHUB_ENV
+
+- uses: rrl-personal-projects/actions-opencache@v1
+  with:
+    storage-provider: gcs
+    gcs-bucket: my-gha-cache-bucket
+    gcs-project: my-project
+    path: node_modules
+    key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+- name: Clean up credentials
+  if: always()
+  run: rm -f ${{ runner.temp }}/gcp-key.json
+```
+
+### Option 2: Workload Identity Federation (Recommended, Keyless)
+
+Workload Identity eliminates the need for service account keys and provides better security.
+
+**1. Create Workload Identity Pool:**
+```bash
+# Create pool
+gcloud iam workload-identity-pools create github-pool \
+  --project=my-project \
+  --location=global \
+  --display-name="GitHub Actions Pool"
+
+# Create provider for GitHub
+gcloud iam workload-identity-pools providers create-oidc github-provider \
+  --project=my-project \
+  --location=global \
+  --workload-identity-pool=github-pool \
+  --display-name="GitHub Provider" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
+  --attribute-condition="assertion.repository_owner == 'your-github-org'" \
+  --issuer-uri="https://token.actions.githubusercontent.com"
+```
+
+**2. Create service account and grant permissions:**
+```bash
+# Create service account
+gcloud iam service-accounts create github-actions-cache \
+  --project=my-project \
+  --display-name="GitHub Actions Cache"
+
+# Grant Storage Object Admin role
+gcloud storage buckets add-iam-policy-binding gs://my-gha-cache-bucket \
+  --member=serviceAccount:github-actions-cache@my-project.iam.gserviceaccount.com \
+  --role=roles/storage.objectAdmin
+
+# Allow GitHub Actions to impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding github-actions-cache@my-project.iam.gserviceaccount.com \
+  --project=my-project \
+  --role=roles/iam.workloadIdentityUser \
+  --member="principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/attribute.repository/your-github-org/your-repo"
+```
+
+Replace `PROJECT_NUMBER` with your GCP project number (find it with `gcloud projects describe my-project --format='value(projectNumber)'`).
+
+**3. Configure workflow:**
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate using Workload Identity
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-actions-cache@my-project.iam.gserviceaccount.com
+
+      # Use GCS cache (credentials automatically available via ADC)
+      - uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          storage-provider: gcs
+          gcs-bucket: my-gha-cache-bucket
+          gcs-project: my-project
+          path: node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+```
+
+**Benefits of Workload Identity:**
+- No service account keys to manage or rotate
+- Automatic credential expiration
+- Better security posture (no long-lived credentials)
+- Fine-grained access control per repository
+
+**Required IAM Permissions:**
+
+For the service account, grant `roles/storage.objectAdmin` on the bucket, which includes:
+- `storage.objects.create`
+- `storage.objects.delete`
+- `storage.objects.get`
+- `storage.objects.list`
+
+**Troubleshooting:**
+- Verify Workload Identity setup: `gcloud iam workload-identity-pools providers describe github-provider --project=my-project --location=global --workload-identity-pool=github-pool`
+- Check service account permissions: `gsutil iam get gs://my-gha-cache-bucket`
+- Enable debug logging: Set `ACTIONS_STEP_DEBUG: true` in workflow environment
+
 ## Testing Your Migration
 
 **1. Test cache save:**
@@ -233,6 +389,11 @@ cat /srv/gha-cache/v1/github.com/owner/repo/index.json
 S3:
 ```bash
 aws s3 ls s3://my-gha-cache-bucket/gha-cache/ --recursive
+```
+
+GCS:
+```bash
+gsutil ls -r gs://my-gha-cache-bucket/gha-cache/
 ```
 
 **Troubleshooting checklist:**
