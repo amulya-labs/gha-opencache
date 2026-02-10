@@ -1,6 +1,8 @@
 # actions-opencache
 
 [![CI](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/rrl-personal-projects/actions-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/rrl-personal-projects/actions-opencache)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rrl-personal-projects/actions-opencache/badge)](https://securityscorecards.dev/viewer/?uri=github.com/rrl-personal-projects/actions-opencache)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.

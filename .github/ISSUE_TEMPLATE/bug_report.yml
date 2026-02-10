@@ -1,0 +1,128 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the information below to help us investigate.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of what the bug is
+      placeholder: Describe the issue you encountered
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Configure action with...
+        2. Run workflow...
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+      placeholder: Describe what should have happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+      placeholder: Describe what actually happened
+    validations:
+      required: true
+
+  - type: input
+    id: action-version
+    attributes:
+      label: Action Version
+      description: Which version of the action are you using?
+      placeholder: "v1.0.0 or commit SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: storage-backend
+    attributes:
+      label: Storage Backend
+      description: Which storage backend are you using?
+      options:
+        - Local filesystem
+        - AWS S3
+        - Google Cloud Storage (GCS)
+        - Azure Blob Storage
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node Version
+      description: What version of Node.js is the runner using?
+      placeholder: "20.x"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: runner-os
+    attributes:
+      label: Runner OS
+      description: What OS is the GitHub Actions runner using?
+      options:
+        - Ubuntu
+        - macOS
+        - Windows
+        - Self-hosted (specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: workflow-config
+    attributes:
+      label: Workflow Configuration
+      description: Relevant workflow YAML configuration
+      placeholder: |
+        ```yaml
+        - uses: rrl-personal-projects/actions-opencache@v1
+          with:
+            key: my-cache-key
+            path: ./cache-dir
+        ```
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Any relevant log output
+      placeholder: Paste logs here
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem
+      placeholder: Add any other relevant information
+    validations:
+      required: false
