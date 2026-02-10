@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { createLocalStorageProvider } from './storage/localProvider';
+import { createLocalStorageProvider, LocalStorageOptions } from './storage/localProvider';
 import { getSaveInputs, getRepoInfo, isExactKeyMatch } from './utils/actionUtils';
 import { IStateProvider } from './utils/stateProvider';
 import { State } from './constants';
@@ -27,7 +27,13 @@ export async function saveCache(stateProvider: IStateProvider): Promise<SaveResu
 
   core.info(`Saving cache for key: ${primaryKey}`);
 
-  const storage = createLocalStorageProvider(inputs.cachePath, owner, repo);
+  const storageOptions: LocalStorageOptions = {
+    compression: inputs.compression,
+    ttlDays: inputs.ttlDays,
+    maxCacheSizeGb: inputs.maxCacheSizeGb,
+  };
+
+  const storage = createLocalStorageProvider(inputs.cachePath, owner, repo, storageOptions);
 
   try {
     await storage.save(primaryKey, paths);
@@ -46,7 +52,13 @@ export async function saveCacheOnly(): Promise<SaveResult> {
 
   core.info(`Saving cache for key: ${inputs.key}`);
 
-  const storage = createLocalStorageProvider(inputs.cachePath, owner, repo);
+  const storageOptions: LocalStorageOptions = {
+    compression: inputs.compression,
+    ttlDays: inputs.ttlDays,
+    maxCacheSizeGb: inputs.maxCacheSizeGb,
+  };
+
+  const storage = createLocalStorageProvider(inputs.cachePath, owner, repo, storageOptions);
 
   try {
     await storage.save(inputs.key, inputs.paths);

@@ -1,4 +1,11 @@
-import { CacheEntry, CacheIndex, findEntry, findEntriesByPrefix } from './indexManager';
+import {
+  CacheEntry,
+  CacheIndex,
+  findEntry,
+  findEntriesByPrefix,
+  isExpired,
+  filterValidEntries,
+} from './indexManager';
 
 export interface ResolveResult {
   entry: CacheEntry | undefined;
@@ -10,8 +17,8 @@ export interface ResolveResult {
  * Resolves a cache key against the index.
  *
  * Algorithm:
- * 1. Try exact match on primary key -> cache-hit: true
- * 2. Try prefix match on restore-keys in order, newest matching entry wins -> cache-hit: false
+ * 1. Try exact match on primary key (if not expired) -> cache-hit: true
+ * 2. Try prefix match on restore-keys in order, newest non-expired matching entry wins -> cache-hit: false
  * 3. No match found -> cache-hit: false, no entry
  */
 export function resolveKey(
@@ -19,9 +26,11 @@ export function resolveKey(
   primaryKey: string,
   restoreKeys: string[]
 ): ResolveResult {
-  // Step 1: Exact match on primary key
+  const now = new Date();
+
+  // Step 1: Exact match on primary key (if not expired)
   const exactMatch = findEntry(index, primaryKey);
-  if (exactMatch) {
+  if (exactMatch && !isExpired(exactMatch, now)) {
     return {
       entry: exactMatch,
       isExactMatch: true,
@@ -29,12 +38,13 @@ export function resolveKey(
     };
   }
 
-  // Step 2: Try restore-keys in order (first match wins, but newest within that prefix)
+  // Step 2: Try restore-keys in order (first match wins, but newest non-expired within that prefix)
   for (const restoreKey of restoreKeys) {
     const matches = findEntriesByPrefix(index, restoreKey);
-    if (matches.length > 0) {
+    const validMatches = filterValidEntries(matches, now);
+    if (validMatches.length > 0) {
       // matches are already sorted by createdAt descending, so first is newest
-      const newestMatch = matches[0];
+      const newestMatch = validMatches[0];
       return {
         entry: newestMatch,
         isExactMatch: false,
