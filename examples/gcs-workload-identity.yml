@@ -1,0 +1,62 @@
+# Example: Using Google Cloud Storage with Workload Identity (keyless authentication)
+#
+# Prerequisites:
+# 1. Create a GCS bucket: gsutil mb -p my-project gs://my-cache-bucket
+# 2. Set up Workload Identity Federation for GitHub Actions
+# 3. Create a service account with Storage Object Admin role
+# 4. Grant the service account access to the Workload Identity Pool
+#
+# Benefits:
+# - No service account keys to manage
+# - Automatic credential rotation
+# - Better security posture
+#
+# See MIGRATION.md for detailed Workload Identity setup
+
+name: GCS Cache with Workload Identity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Required for Workload Identity
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate with GCP using Workload Identity (keyless)
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-actions@my-project.iam.gserviceaccount.com
+
+      # Cache node_modules using GCS with Workload Identity
+      - uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+          storage-provider: gcs
+          gcs-bucket: my-cache-bucket
+          gcs-project: my-project
+          # No gcs-key-file needed - uses ADC from Workload Identity
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test

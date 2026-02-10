@@ -3,12 +3,13 @@
 [![CI](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-100% API-compatible replacement for `actions/cache` with local filesystem and S3-compatible storage support for self-hosted runners.
+100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.
 
 ## Why Use This?
 
 - **Self-hosted runners** - Cache locally instead of GitHub's hosted service
 - **Custom S3 storage** - Use your own S3, MinIO, R2, or compatible storage
+- **Google Cloud Storage** - Native GCS support with Workload Identity
 - **Full restore-keys support** - Proper prefix matching with newest-first ordering
 - **Drop-in compatible** - Same API as `actions/cache`
 
@@ -38,6 +39,19 @@
     AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
 ```
 
+**Google Cloud Storage**:
+```yaml
+- uses: rrl-personal-projects/actions-opencache@v1
+  with:
+    path: node_modules
+    key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+    storage-provider: gcs
+    gcs-bucket: my-cache-bucket
+    gcs-project: my-project
+  env:
+    GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY_PATH }}
+```
+
 → See [MIGRATION.md](MIGRATION.md) for setup instructions
 → See [examples/](examples/) for more use cases
 
@@ -45,6 +59,7 @@
 
 - ✅ Local filesystem storage for self-hosted runners
 - ✅ S3-compatible storage (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, etc.)
+- ✅ Google Cloud Storage (GCS) with native Workload Identity support
 - ✅ Full restore-keys prefix matching with newest-first ordering
 - ✅ Configurable compression (zstd, gzip, none) and levels
 - ✅ TTL-based expiration and LRU eviction
@@ -60,7 +75,7 @@
 | `key` | Primary cache key | **Yes** | - |
 | `path` | Files/directories to cache (supports wildcards) | **Yes** | - |
 | `restore-keys` | Ordered fallback keys (newline-separated) | No | - |
-| `storage-provider` | Storage backend: `local` or `s3` | No | `local` |
+| `storage-provider` | Storage backend: `local`, `s3`, or `gcs` | No | `local` |
 
 ### Storage Configuration
 
@@ -74,6 +89,13 @@
 - `s3-prefix` - Key prefix (default: `gha-cache/`)
 - `s3-force-path-style` - Use path-style URLs (required for MinIO)
 - Environment: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`
+
+**Google Cloud Storage:**
+- `gcs-bucket` - Bucket name (required for GCS)
+- `gcs-project` - Project ID (optional, uses default from credentials)
+- `gcs-prefix` - Key prefix (default: `gha-cache/`)
+- `gcs-key-file` - Path to service account key JSON
+- Environment: `GOOGLE_APPLICATION_CREDENTIALS` (or use Workload Identity)
 
 ### Outputs
 
@@ -103,6 +125,8 @@
 **Local filesystem** (default) - Caches on runner disk at `/srv/gha-cache/v1/`
 
 **S3-compatible** - Works with AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, etc.
+
+**Google Cloud Storage (GCS)** - Native GCS with Workload Identity or service account keys
 
 → See [MIGRATION.md](MIGRATION.md) for setup instructions for each provider
 
