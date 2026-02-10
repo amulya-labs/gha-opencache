@@ -58,8 +58,12 @@ jobs:
           echo "All dist files present"
 
   test-action:
-    runs-on: ubuntu-latest
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,25 +83,37 @@ jobs:
       - name: Create test files
         run: |
           mkdir -p test-cache-dir
-          echo "test content $(date)" > test-cache-dir/test.txt
+          echo "test content ${{ github.run_id }}" > test-cache-dir/test.txt
+        shell: bash
+
+      - name: Set cache path
+        id: cache-path
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            echo "path=${{ runner.temp }}/gha-cache-test" >> $GITHUB_OUTPUT
+          else
+            echo "path=/tmp/gha-cache-test" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
 
       - name: Test save action
         uses: ./save
         with:
-          key: test-${{ github.run_id }}
+          key: test-${{ matrix.os }}-${{ github.run_id }}
           path: test-cache-dir
-          cache-path: /tmp/gha-cache-test
+          cache-path: ${{ steps.cache-path.outputs.path }}
 
       - name: Remove test files
         run: rm -rf test-cache-dir
+        shell: bash
 
       - name: Test restore action
         id: restore
         uses: ./restore
         with:
-          key: test-${{ github.run_id }}
+          key: test-${{ matrix.os }}-${{ github.run_id }}
           path: test-cache-dir
-          cache-path: /tmp/gha-cache-test
+          cache-path: ${{ steps.cache-path.outputs.path }}
 
       - name: Verify restore
         run: |
@@ -107,6 +123,7 @@ jobs:
           fi
           echo "Cache restore successful"
           cat test-cache-dir/test.txt
+        shell: bash
 
       - name: Verify cache hit
         run: |
@@ -115,3 +132,40 @@ jobs:
             exit 1
           fi
           echo "Cache hit verified"
+        shell: bash
+
+      - name: Test compression options (gzip)
+        run: |
+          mkdir -p test-gzip-dir
+          echo "gzip test ${{ github.run_id }}" > test-gzip-dir/test.txt
+        shell: bash
+
+      - name: Save with gzip compression
+        uses: ./save
+        with:
+          key: test-gzip-${{ matrix.os }}-${{ github.run_id }}
+          path: test-gzip-dir
+          cache-path: ${{ steps.cache-path.outputs.path }}
+          compression: gzip
+          compression-level: '9'
+
+      - name: Remove gzip test files
+        run: rm -rf test-gzip-dir
+        shell: bash
+
+      - name: Restore gzip cache
+        id: restore-gzip
+        uses: ./restore
+        with:
+          key: test-gzip-${{ matrix.os }}-${{ github.run_id }}
+          path: test-gzip-dir
+          cache-path: ${{ steps.cache-path.outputs.path }}
+
+      - name: Verify gzip restore
+        run: |
+          if [ ! -f test-gzip-dir/test.txt ]; then
+            echo "Gzip cache restore failed"
+            exit 1
+          fi
+          echo "Gzip cache restore successful"
+        shell: bash

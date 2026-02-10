@@ -61158,6 +61158,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.detectCompressionMethod = detectCompressionMethod;
+exports.isCompressionAvailable = isCompressionAvailable;
+exports.resolveCompressionMethod = resolveCompressionMethod;
 exports.getArchiveExtension = getArchiveExtension;
 exports.compressArchive = compressArchive;
 exports.decompressArchive = decompressArchive;
@@ -61166,6 +61168,10 @@ const exec = __importStar(__nccwpck_require__(5236));
 const io = __importStar(__nccwpck_require__(4994));
 const core = __importStar(__nccwpck_require__(7484));
 const fs = __importStar(__nccwpck_require__(9896));
+const constants_1 = __nccwpck_require__(7242);
+/**
+ * Detect available compression method
+ */
 async function detectCompressionMethod() {
     try {
         await io.which('zstd', true);
@@ -61176,34 +61182,119 @@ async function detectCompressionMethod() {
         return 'gzip';
     }
 }
-function getArchiveExtension(method) {
-    return method === 'zstd' ? '.tar.zst' : '.tar.gz';
+/**
+ * Check if a specific compression tool is available
+ */
+async function isCompressionAvailable(method) {
+    if (method === 'none') {
+        return true;
+    }
+    try {
+        await io.which(method, true);
+        return true;
+    }
+    catch {
+        return false;
+    }
 }
-async function compressArchive(tarPath, outputPath, method) {
-    if (method === 'zstd') {
-        await exec.exec('zstd', ['-T0', '--long=30', '-o', outputPath, tarPath]);
+/**
+ * Resolve 'auto' to an actual compression method, or validate explicit method
+ */
+async function resolveCompressionMethod(options) {
+    let method;
+    if (options.method === 'auto') {
+        method = await detectCompressionMethod();
     }
     else {
-        await exec.exec('gzip', ['-c', tarPath], {
+        method = options.method;
+        // Validate that the explicit method is available
+        if (method !== 'none') {
+            const available = await isCompressionAvailable(method);
+            if (!available) {
+                throw new Error(`Compression method '${method}' is not available. Please install ${method} or use 'auto' for automatic detection.`);
+            }
+        }
+    }
+    // Determine and validate level
+    let level;
+    if (method === 'none') {
+        level = 0;
+    }
+    else if (method === 'zstd') {
+        level = options.level ?? constants_1.DEFAULT_ZSTD_LEVEL;
+        // zstd supports levels 1-19 (and up to 22 with --ultra)
+        if (level < 1 || level > 19) {
+            core.warning(`Invalid zstd compression level ${level}, clamping to valid range (1-19)`);
+            level = Math.max(1, Math.min(19, level));
+        }
+    }
+    else {
+        // gzip
+        level = options.level ?? constants_1.DEFAULT_GZIP_LEVEL;
+        // gzip supports levels 1-9
+        if (level < 1 || level > 9) {
+            core.warning(`Invalid gzip compression level ${level}, clamping to valid range (1-9)`);
+            level = Math.max(1, Math.min(9, level));
+        }
+    }
+    return { method, level };
+}
+function getArchiveExtension(method) {
+    switch (method) {
+        case 'zstd':
+            return '.tar.zst';
+        case 'gzip':
+            return '.tar.gz';
+        case 'none':
+            return '.tar';
+    }
+}
+async function compressArchive(tarPath, outputPath, method, level) {
+    if (method === 'zstd') {
+        const compressionLevel = level ?? constants_1.DEFAULT_ZSTD_LEVEL;
+        await exec.exec('zstd', [
+            '-f', // Force overwrite if file exists
+            `-${compressionLevel}`,
+            '-T0',
+            '--long=30',
+            '-o',
+            outputPath,
+            tarPath,
+        ]);
+    }
+    else if (method === 'gzip') {
+        const compressionLevel = level ?? constants_1.DEFAULT_GZIP_LEVEL;
+        await exec.exec('gzip', [`-${compressionLevel}`, '-c', tarPath], {
             outStream: fs.createWriteStream(outputPath),
         });
+    }
+    else {
+        // none - just copy the tar file
+        await fs.promises.copyFile(tarPath, outputPath);
     }
 }
 async function decompressArchive(archivePath, outputPath, method) {
     if (method === 'zstd') {
         await exec.exec('zstd', ['-d', '-o', outputPath, archivePath]);
     }
-    else {
+    else if (method === 'gzip') {
         await exec.exec('gzip', ['-d', '-c', archivePath], {
             outStream: fs.createWriteStream(outputPath),
         });
+    }
+    else {
+        // none - just copy the tar file
+        await fs.promises.copyFile(archivePath, outputPath);
     }
 }
 function getCompressionMethodFromPath(archivePath) {
     if (archivePath.endsWith('.tar.zst') || archivePath.endsWith('.zst')) {
         return 'zstd';
     }
-    return 'gzip';
+    if (archivePath.endsWith('.tar.gz') || archivePath.endsWith('.gz')) {
+        return 'gzip';
+    }
+    return 'none';
 }
 
 
@@ -61257,8 +61348,10 @@ const path = __importStar(__nccwpck_require__(6928));
 const fs = __importStar(__nccwpck_require__(9896));
 const crypto = __importStar(__nccwpck_require__(6982));
 const compression_1 = __nccwpck_require__(4604);
-async function createArchive(paths, archiveDir, workingDir) {
-    const compressionMethod = await (0, compression_1.detectCompressionMethod)();
+async function createArchive(paths, archiveDir, workingDir, compressionOptions) {
+    // Resolve compression method and level
+    const options = compressionOptions || { method: 'auto' };
+    const { method, level } = await (0, compression_1.resolveCompressionMethod)(options);
     const tempTarPath = path.join(archiveDir, `cache-${Date.now()}.tar`);
     const resolvedPaths = await resolvePaths(paths);
     if (resolvedPaths.length === 0) {
@@ -61275,11 +61368,11 @@ async function createArchive(paths, archiveDir, workingDir) {
     finally {
         await io.rmRF(manifestPath);
     }
-    // Compress
-    const extension = (0, compression_1.getArchiveExtension)(compressionMethod);
+    // Compress (or copy if 'none')
+    const extension = (0, compression_1.getArchiveExtension)(method);
     const hash = await computeFileHash(tempTarPath);
     const finalArchivePath = path.join(archiveDir, `sha256-${hash}${extension}`);
-    await compressWithMethod(tempTarPath, finalArchivePath, compressionMethod);
+    await (0, compression_1.compressArchive)(tempTarPath, finalArchivePath, method, level);
     await io.rmRF(tempTarPath);
     const stats = fs.statSync(finalArchivePath);
     return {
@@ -61289,10 +61382,10 @@ async function createArchive(paths, archiveDir, workingDir) {
     };
 }
 async function extractArchive(archivePath, targetDir) {
-    const compressionMethod = getCompressionMethodFromArchive(archivePath);
+    const compressionMethod = (0, compression_1.getCompressionMethodFromPath)(archivePath);
     const tempTarPath = path.join(path.dirname(archivePath), `extract-${Date.now()}.tar`);
     try {
-        await decompressWithMethod(archivePath, tempTarPath, compressionMethod);
+        await (0, compression_1.decompressArchive)(archivePath, tempTarPath, compressionMethod);
         await exec.exec('tar', ['-xf', tempTarPath, '-C', targetDir]);
     }
     finally {
@@ -61315,32 +61408,6 @@ async function computeFileHash(filePath) {
         stream.on('error', reject);
     });
 }
-function getCompressionMethodFromArchive(archivePath) {
-    if (archivePath.endsWith('.tar.zst') || archivePath.endsWith('.zst')) {
-        return 'zstd';
-    }
-    return 'gzip';
-}
-async function compressWithMethod(inputPath, outputPath, method) {
-    if (method === 'zstd') {
-        await exec.exec('zstd', ['-f', '-T0', '--long=30', '-o', outputPath, inputPath]);
-    }
-    else {
-        await exec.exec('gzip', ['-c', inputPath], {
-            outStream: fs.createWriteStream(outputPath),
-        });
-    }
-}
-async function decompressWithMethod(inputPath, outputPath, method) {
-    if (method === 'zstd') {
-        await exec.exec('zstd', ['-d', '-o', outputPath, inputPath]);
-    }
-    else {
-        await exec.exec('gzip', ['-d', '-c', inputPath], {
-            outStream: fs.createWriteStream(outputPath),
-        });
-    }
-}
 
 
 /***/ }),
@@ -61351,7 +61418,7 @@ async function decompressWithMethod(inputPath, outputPath, method) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LOCK_OPTIONS = exports.INDEX_VERSION = exports.ARCHIVES_DIR = exports.INDEX_FILE = exports.DEFAULT_CACHE_PATH = exports.State = exports.Outputs = exports.Inputs = void 0;
+exports.LOCK_OPTIONS = exports.BYTES_PER_GB = exports.DEFAULT_MAX_CACHE_SIZE_GB = exports.DEFAULT_TTL_DAYS = exports.DEFAULT_GZIP_LEVEL = exports.DEFAULT_ZSTD_LEVEL = exports.DEFAULT_COMPRESSION = exports.INDEX_VERSION = exports.ARCHIVES_DIR = exports.INDEX_FILE = exports.DEFAULT_CACHE_PATH = exports.State = exports.Outputs = exports.Inputs = void 0;
 var Inputs;
 (function (Inputs) {
     Inputs["Key"] = "key";
@@ -61363,6 +61430,10 @@ var Inputs;
     Inputs["LookupOnly"] = "lookup-only";
     Inputs["SaveAlways"] = "save-always";
     Inputs["CachePath"] = "cache-path";
+    Inputs["Compression"] = "compression";
+    Inputs["CompressionLevel"] = "compression-level";
+    Inputs["TtlDays"] = "ttl-days";
+    Inputs["MaxCacheSizeGb"] = "max-cache-size-gb";
 })(Inputs || (exports.Inputs = Inputs = {}));
 var Outputs;
 (function (Outputs) {
@@ -61379,7 +61450,15 @@ var State;
 exports.DEFAULT_CACHE_PATH = '/srv/gha-cache/v1';
 exports.INDEX_FILE = 'index.json';
 exports.ARCHIVES_DIR = 'archives';
-exports.INDEX_VERSION = '1';
+exports.INDEX_VERSION = '2';
+// Compression defaults
+exports.DEFAULT_COMPRESSION = 'auto';
+exports.DEFAULT_ZSTD_LEVEL = 3;
+exports.DEFAULT_GZIP_LEVEL = 6;
+// TTL and size defaults
+exports.DEFAULT_TTL_DAYS = 30;
+exports.DEFAULT_MAX_CACHE_SIZE_GB = 10;
+exports.BYTES_PER_GB = 1024 * 1024 * 1024;
 exports.LOCK_OPTIONS = {
     retries: {
         retries: 5,
@@ -61440,6 +61519,12 @@ exports.removeEntry = removeEntry;
 exports.findEntry = findEntry;
 exports.findEntriesByPrefix = findEntriesByPrefix;
 exports.ensureArchivesDir = ensureArchivesDir;
+exports.isExpired = isExpired;
+exports.filterValidEntries = filterValidEntries;
+exports.getTotalCacheSize = getTotalCacheSize;
+exports.getEntriesByLRU = getEntriesByLRU;
+exports.updateAccessTime = updateAccessTime;
+exports.migrateIndex = migrateIndex;
 const fs = __importStar(__nccwpck_require__(9896));
 const path = __importStar(__nccwpck_require__(6928));
 const io = __importStar(__nccwpck_require__(4994));
@@ -61458,8 +61543,12 @@ async function loadIndex(cacheDir) {
     try {
         const content = fs.readFileSync(indexPath, 'utf-8');
         const index = JSON.parse(content);
+        // Handle version migration
+        if (index.version === '1') {
+            return migrateIndex(index);
+        }
         if (index.version !== constants_1.INDEX_VERSION) {
-            // Future: handle migrations
+            // Unknown future version - return empty to be safe
             return createEmptyIndex();
         }
         return index;
@@ -61501,6 +61590,66 @@ async function ensureArchivesDir(cacheDir) {
     await io.mkdirP(archivesDir);
     return archivesDir;
 }
+/**
+ * Check if a cache entry has expired
+ */
+function isExpired(entry, now) {
+    if (!entry.expiresAt) {
+        return false;
+    }
+    const expirationDate = new Date(entry.expiresAt);
+    const currentDate = now || new Date();
+    return currentDate >= expirationDate;
+}
+/**
+ * Filter out expired entries from an array
+ */
+function filterValidEntries(entries, now) {
+    return entries.filter(entry => !isExpired(entry, now));
+}
+/**
+ * Get total size of all cache entries in bytes
+ */
+function getTotalCacheSize(index) {
+    return index.entries.reduce((total, entry) => total + entry.sizeBytes, 0);
+}
+/**
+ * Get entries sorted by LRU (least recently used first)
+ * Uses accessedAt if available, otherwise falls back to createdAt
+ */
+function getEntriesByLRU(index) {
+    return [...index.entries].sort((a, b) => {
+        const aTime = new Date(a.accessedAt || a.createdAt).getTime();
+        const bTime = new Date(b.accessedAt || b.createdAt).getTime();
+        return aTime - bTime; // oldest first
+    });
+}
+/**
+ * Update the accessedAt timestamp for an entry
+ */
+function updateAccessTime(index, key, now) {
+    const timestamp = (now || new Date()).toISOString();
+    return {
+        ...index,
+        entries: index.entries.map(entry => entry.key === key ? { ...entry, accessedAt: timestamp } : entry),
+    };
+}
+/**
+ * Migrate index from v1 to v2
+ * - Sets version to '2'
+ * - Adds default accessedAt based on createdAt for existing entries
+ */
+function migrateIndex(index) {
+    return {
+        version: constants_1.INDEX_VERSION,
+        entries: index.entries.map(entry => ({
+            ...entry,
+            // Set accessedAt to createdAt if not present (for LRU ordering)
+            accessedAt: entry.accessedAt || entry.createdAt,
+            // expiresAt remains undefined for migrated entries (no expiration)
+        })),
+    };
+}
 
 
 /***/ }),
@@ -61517,26 +61666,28 @@ const indexManager_1 = __nccwpck_require__(3450);
  * Resolves a cache key against the index.
  *
  * Algorithm:
- * 1. Try exact match on primary key -> cache-hit: true
- * 2. Try prefix match on restore-keys in order, newest matching entry wins -> cache-hit: false
+ * 1. Try exact match on primary key (if not expired) -> cache-hit: true
+ * 2. Try prefix match on restore-keys in order, newest non-expired matching entry wins -> cache-hit: false
  * 3. No match found -> cache-hit: false, no entry
  */
 function resolveKey(index, primaryKey, restoreKeys) {
-    // Step 1: Exact match on primary key
+    const now = new Date();
+    // Step 1: Exact match on primary key (if not expired)
     const exactMatch = (0, indexManager_1.findEntry)(index, primaryKey);
-    if (exactMatch) {
+    if (exactMatch && !(0, indexManager_1.isExpired)(exactMatch, now)) {
         return {
             entry: exactMatch,
             isExactMatch: true,
             matchedKey: primaryKey,
         };
     }
-    // Step 2: Try restore-keys in order (first match wins, but newest within that prefix)
+    // Step 2: Try restore-keys in order (first match wins, but newest non-expired within that prefix)
     for (const restoreKey of restoreKeys) {
         const matches = (0, indexManager_1.findEntriesByPrefix)(index, restoreKey);
-        if (matches.length > 0) {
+        const validMatches = (0, indexManager_1.filterValidEntries)(matches, now);
+        if (validMatches.length > 0) {
             // matches are already sorted by createdAt descending, so first is newest
-            const newestMatch = matches[0];
+            const newestMatch = validMatches[0];
             return {
                 entry: newestMatch,
                 isExactMatch: false,
@@ -61669,7 +61820,12 @@ async function saveCache(stateProvider) {
         return { saved: false, key: primaryKey };
     }
     core.info(`Saving cache for key: ${primaryKey}`);
-    const storage = (0, localProvider_1.createLocalStorageProvider)(inputs.cachePath, owner, repo);
+    const storageOptions = {
+        compression: inputs.compression,
+        ttlDays: inputs.ttlDays,
+        maxCacheSizeGb: inputs.maxCacheSizeGb,
+    };
+    const storage = (0, localProvider_1.createLocalStorageProvider)(inputs.cachePath, owner, repo, storageOptions);
     try {
         await storage.save(primaryKey, paths);
         core.info(`Cache saved successfully for key: ${primaryKey}`);
@@ -61685,7 +61841,12 @@ async function saveCacheOnly() {
     const inputs = (0, actionUtils_1.getSaveInputs)();
     const { owner, repo } = (0, actionUtils_1.getRepoInfo)();
     core.info(`Saving cache for key: ${inputs.key}`);
-    const storage = (0, localProvider_1.createLocalStorageProvider)(inputs.cachePath, owner, repo);
+    const storageOptions = {
+        compression: inputs.compression,
+        ttlDays: inputs.ttlDays,
+        maxCacheSizeGb: inputs.maxCacheSizeGb,
+    };
+    const storage = (0, localProvider_1.createLocalStorageProvider)(inputs.cachePath, owner, repo, storageOptions);
     try {
         await storage.save(inputs.key, inputs.paths);
         core.info(`Cache saved successfully for key: ${inputs.key}`);
@@ -61753,9 +61914,11 @@ const constants_1 = __nccwpck_require__(7242);
 class LocalStorageProvider {
     cacheDir;
     lockPath;
-    constructor(basePath, owner, repo) {
+    options;
+    constructor(basePath, owner, repo, options = {}) {
         this.cacheDir = path.join(basePath, owner, repo);
         this.lockPath = path.join(this.cacheDir, `${constants_1.INDEX_FILE}.lock`);
+        this.options = options;
     }
     async resolve(primaryKey, restoreKeys) {
         return (0, locking_1.withLock)(this.lockPath, async () => {
@@ -61771,26 +61934,72 @@ class LocalStorageProvider {
         core.info(`Extracting cache from ${archivePath}`);
         await (0, tar_1.extractArchive)(archivePath, process.cwd());
         core.info(`Cache restored successfully`);
+        // Update accessedAt for LRU tracking
+        // This is best-effort and shouldn't block/fail the restore
+        try {
+            await (0, locking_1.withLock)(this.lockPath, async () => {
+                const index = await (0, indexManager_1.loadIndex)(this.cacheDir);
+                const updatedIndex = (0, indexManager_1.updateAccessTime)(index, entry.key);
+                await (0, indexManager_1.saveIndex)(this.cacheDir, updatedIndex);
+            });
+        }
+        catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            core.debug(`Failed to update accessedAt: ${message}`);
+        }
     }
     async save(key, paths) {
         return (0, locking_1.withLock)(this.lockPath, async () => {
-            const index = await (0, indexManager_1.loadIndex)(this.cacheDir);
+            let index = await (0, indexManager_1.loadIndex)(this.cacheDir);
             // Check if entry already exists
             const existing = (0, indexManager_1.findEntry)(index, key);
             if (existing) {
                 core.info(`Cache entry already exists for key: ${key}`);
                 return existing;
             }
+            // Clean up expired entries opportunistically
+            const { index: cleanedIndex, deletedCount } = await this.cleanupExpiredEntries(index);
+            if (deletedCount > 0) {
+                core.info(`Cleaned up ${deletedCount} expired cache entries`);
+            }
+            index = cleanedIndex;
             // Create archive
             const archivesDir = await (0, indexManager_1.ensureArchivesDir)(this.cacheDir);
             core.info(`Creating cache archive for ${paths.length} path(s)`);
-            const result = await (0, tar_1.createArchive)(paths, archivesDir);
+            const result = await (0, tar_1.createArchive)(paths, archivesDir, undefined, this.options.compression);
+            // Calculate expiration time
+            const now = new Date();
+            let expiresAt;
+            if (this.options.ttlDays && this.options.ttlDays > 0) {
+                const expireDate = new Date(now);
+                expireDate.setDate(expireDate.getDate() + this.options.ttlDays);
+                expiresAt = expireDate.toISOString();
+            }
             const entry = {
                 key,
                 archivePath: path.relative(this.cacheDir, result.archivePath),
-                createdAt: new Date().toISOString(),
+                createdAt: now.toISOString(),
                 sizeBytes: result.sizeBytes,
+                expiresAt,
+                accessedAt: now.toISOString(),
             };
+            // Check if we need to evict entries before adding
+            if (this.options.maxCacheSizeGb && this.options.maxCacheSizeGb > 0) {
+                const maxBytes = this.options.maxCacheSizeGb * constants_1.BYTES_PER_GB;
+                const currentSize = (0, indexManager_1.getTotalCacheSize)(index);
+                const newTotalSize = currentSize + entry.sizeBytes;
+                if (newTotalSize > maxBytes) {
+                    // Single entry exceeds max size - allow but warn
+                    if (entry.sizeBytes > maxBytes) {
+                        core.warning(`Cache entry (${formatBytes(entry.sizeBytes)}) exceeds max cache size (${formatBytes(maxBytes)}). Entry will be saved but may be evicted immediately on next save.`);
+                    }
+                    else {
+                        // Evict to make room
+                        const targetSize = maxBytes - entry.sizeBytes;
+                        index = await this.evictToSize(index, targetSize);
+                    }
+                }
+            }
             // Update index
             const updatedIndex = (0, indexManager_1.addEntry)(index, entry);
             await (0, indexManager_1.saveIndex)(this.cacheDir, updatedIndex);
@@ -61798,10 +62007,88 @@ class LocalStorageProvider {
             return entry;
         });
     }
+    /**
+     * Clean up expired entries and delete their archive files
+     */
+    async cleanupExpiredEntries(index) {
+        const now = new Date();
+        const validEntries = [];
+        let deletedCount = 0;
+        for (const entry of index.entries) {
+            if ((0, indexManager_1.isExpired)(entry, now)) {
+                // Delete the archive file
+                const archivePath = path.join(this.cacheDir, entry.archivePath);
+                try {
+                    if (fs.existsSync(archivePath)) {
+                        fs.unlinkSync(archivePath);
+                        core.debug(`Deleted expired archive: ${entry.key}`);
+                    }
+                }
+                catch (err) {
+                    core.debug(`Failed to delete archive ${archivePath}: ${err}`);
+                }
+                deletedCount++;
+            }
+            else {
+                validEntries.push(entry);
+            }
+        }
+        return {
+            index: { ...index, entries: validEntries },
+            deletedCount,
+        };
+    }
+    /**
+     * Evict entries using LRU until total size is under targetBytes
+     */
+    async evictToSize(index, targetBytes) {
+        // Filter out expired entries first
+        const validEntries = (0, indexManager_1.filterValidEntries)(index.entries);
+        const currentSize = validEntries.reduce((sum, e) => sum + e.sizeBytes, 0);
+        if (currentSize <= targetBytes) {
+            return { ...index, entries: validEntries };
+        }
+        // Sort by LRU - oldest accessed first
+        const sortedByLRU = (0, indexManager_1.getEntriesByLRU)({ ...index, entries: validEntries });
+        const remainingEntries = [];
+        const evictedEntries = [];
+        // Keep entries from the end (most recently used) until we exceed target
+        // Build the list in reverse - we want to keep the most recently used
+        let keptSize = 0;
+        for (let i = sortedByLRU.length - 1; i >= 0; i--) {
+            const entry = sortedByLRU[i];
+            if (keptSize + entry.sizeBytes <= targetBytes) {
+                remainingEntries.unshift(entry);
+                keptSize += entry.sizeBytes;
+            }
+            else {
+                evictedEntries.push(entry);
+            }
+        }
+        // Delete evicted archives
+        for (const entry of evictedEntries) {
+            const archivePath = path.join(this.cacheDir, entry.archivePath);
+            try {
+                if (fs.existsSync(archivePath)) {
+                    fs.unlinkSync(archivePath);
+                    core.info(`Evicted cache entry (LRU): ${entry.key} (${formatBytes(entry.sizeBytes)})`);
+                }
+            }
+            catch (err) {
+                core.debug(`Failed to delete evicted archive ${archivePath}: ${err}`);
+            }
+        }
+        if (evictedEntries.length > 0) {
+            core.info(`Evicted ${evictedEntries.length} entries to stay under cache size limit`);
+        }
+        return { ...index, entries: remainingEntries };
+    }
     async exists(key) {
         return (0, locking_1.withLock)(this.lockPath, async () => {
             const index = await (0, indexManager_1.loadIndex)(this.cacheDir);
-            return (0, indexManager_1.findEntry)(index, key) !== undefined;
+            const entry = (0, indexManager_1.findEntry)(index, key);
+            // Entry exists if found and not expired
+            return entry !== undefined && !(0, indexManager_1.isExpired)(entry);
         });
     }
     async getIndex() {
@@ -61819,8 +62106,8 @@ function formatBytes(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
-function createLocalStorageProvider(basePath, owner, repo) {
-    return new LocalStorageProvider(basePath, owner, repo);
+function createLocalStorageProvider(basePath, owner, repo, options) {
+    return new LocalStorageProvider(basePath, owner, repo, options);
 }
 
 
@@ -61946,6 +62233,70 @@ exports.getRepoInfo = getRepoInfo;
 exports.isExactKeyMatch = isExactKeyMatch;
 const core = __importStar(__nccwpck_require__(7484));
 const constants_1 = __nccwpck_require__(7242);
+/**
+ * Parse compression method from input string
+ */
+function parseCompressionMethod(value) {
+    const normalized = value.toLowerCase().trim();
+    const validMethods = ['auto', 'zstd', 'gzip', 'none'];
+    if (!validMethods.includes(normalized)) {
+        core.warning(`Invalid compression method '${value}'. Valid values: ${validMethods.join(', ')}. Using 'auto'.`);
+        return 'auto';
+    }
+    return normalized;
+}
+/**
+ * Parse compression level from input string
+ */
+function parseCompressionLevel(value) {
+    if (!value || value.trim() === '') {
+        return undefined;
+    }
+    const level = parseInt(value, 10);
+    if (isNaN(level)) {
+        core.warning(`Invalid compression level '${value}'. Using default.`);
+        return undefined;
+    }
+    return level;
+}
+/**
+ * Parse compression options from inputs
+ */
+function parseCompressionOptions() {
+    const method = parseCompressionMethod(core.getInput(constants_1.Inputs.Compression) || constants_1.DEFAULT_COMPRESSION);
+    const level = parseCompressionLevel(core.getInput(constants_1.Inputs.CompressionLevel));
+    return { method, level };
+}
+/**
+ * Parse TTL days from input
+ */
+function parseTtlDays() {
+    const value = core.getInput(constants_1.Inputs.TtlDays);
+    if (!value || value.trim() === '') {
+        return constants_1.DEFAULT_TTL_DAYS;
+    }
+    const days = parseInt(value, 10);
+    if (isNaN(days) || days < 0) {
+        core.warning(`Invalid ttl-days '${value}'. Must be >= 0. Using default of ${constants_1.DEFAULT_TTL_DAYS}.`);
+        return constants_1.DEFAULT_TTL_DAYS;
+    }
+    return days;
+}
+/**
+ * Parse max cache size from input
+ */
+function parseMaxCacheSizeGb() {
+    const value = core.getInput(constants_1.Inputs.MaxCacheSizeGb);
+    if (!value || value.trim() === '') {
+        return constants_1.DEFAULT_MAX_CACHE_SIZE_GB;
+    }
+    const size = parseFloat(value);
+    if (isNaN(size) || size < 0) {
+        core.warning(`Invalid max-cache-size-gb '${value}'. Must be >= 0. Using default of ${constants_1.DEFAULT_MAX_CACHE_SIZE_GB}.`);
+        return constants_1.DEFAULT_MAX_CACHE_SIZE_GB;
+    }
+    return size;
+}
 function getInputs() {
     const key = core.getInput(constants_1.Inputs.Key, { required: true });
     const paths = core.getInput(constants_1.Inputs.Path, { required: true }).split('\n').filter(Boolean);
@@ -61954,6 +62305,9 @@ function getInputs() {
     const lookupOnly = core.getBooleanInput(constants_1.Inputs.LookupOnly);
     const saveAlways = core.getBooleanInput(constants_1.Inputs.SaveAlways);
     const cachePath = core.getInput(constants_1.Inputs.CachePath) || constants_1.DEFAULT_CACHE_PATH;
+    const compression = parseCompressionOptions();
+    const ttlDays = parseTtlDays();
+    const maxCacheSizeGb = parseMaxCacheSizeGb();
     return {
         key,
         paths,
@@ -61962,6 +62316,9 @@ function getInputs() {
         lookupOnly,
         saveAlways,
         cachePath,
+        compression,
+        ttlDays,
+        maxCacheSizeGb,
     };
 }
 function getRestoreInputs() {
@@ -61984,7 +62341,10 @@ function getSaveInputs() {
     const key = core.getInput(constants_1.Inputs.Key, { required: true });
     const paths = core.getInput(constants_1.Inputs.Path, { required: true }).split('\n').filter(Boolean);
     const cachePath = core.getInput(constants_1.Inputs.CachePath) || constants_1.DEFAULT_CACHE_PATH;
-    return { key, paths, cachePath };
+    const compression = parseCompressionOptions();
+    const ttlDays = parseTtlDays();
+    const maxCacheSizeGb = parseMaxCacheSizeGb();
+    return { key, paths, cachePath, compression, ttlDays, maxCacheSizeGb };
 }
 function getRepoInfo() {
     const repository = process.env.GITHUB_REPOSITORY || '';

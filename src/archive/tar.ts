@@ -4,7 +4,14 @@ import * as io from '@actions/io';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { CompressionMethod, detectCompressionMethod, getArchiveExtension } from './compression';
+import {
+  CompressionOptions,
+  resolveCompressionMethod,
+  getArchiveExtension,
+  compressArchive,
+  decompressArchive,
+  getCompressionMethodFromPath,
+} from './compression';
 
 export interface CreateArchiveResult {
   archivePath: string;
@@ -15,9 +22,13 @@ export interface CreateArchiveResult {
 export async function createArchive(
   paths: string[],
   archiveDir: string,
-  workingDir?: string
+  workingDir?: string,
+  compressionOptions?: CompressionOptions
 ): Promise<CreateArchiveResult> {
-  const compressionMethod = await detectCompressionMethod();
+  // Resolve compression method and level
+  const options = compressionOptions || { method: 'auto' };
+  const { method, level } = await resolveCompressionMethod(options);
+
   const tempTarPath = path.join(archiveDir, `cache-${Date.now()}.tar`);
   const resolvedPaths = await resolvePaths(paths);
 
@@ -38,12 +49,12 @@ export async function createArchive(
     await io.rmRF(manifestPath);
   }
 
-  // Compress
-  const extension = getArchiveExtension(compressionMethod);
+  // Compress (or copy if 'none')
+  const extension = getArchiveExtension(method);
   const hash = await computeFileHash(tempTarPath);
   const finalArchivePath = path.join(archiveDir, `sha256-${hash}${extension}`);
 
-  await compressWithMethod(tempTarPath, finalArchivePath, compressionMethod);
+  await compressArchive(tempTarPath, finalArchivePath, method, level);
   await io.rmRF(tempTarPath);
 
   const stats = fs.statSync(finalArchivePath);
@@ -56,11 +67,11 @@ export async function createArchive(
 }
 
 export async function extractArchive(archivePath: string, targetDir: string): Promise<void> {
-  const compressionMethod = getCompressionMethodFromArchive(archivePath);
+  const compressionMethod = getCompressionMethodFromPath(archivePath);
   const tempTarPath = path.join(path.dirname(archivePath), `extract-${Date.now()}.tar`);
 
   try {
-    await decompressWithMethod(archivePath, tempTarPath, compressionMethod);
+    await decompressArchive(archivePath, tempTarPath, compressionMethod);
     await exec.exec('tar', ['-xf', tempTarPath, '-C', targetDir]);
   } finally {
     await io.rmRF(tempTarPath);
@@ -83,39 +94,4 @@ async function computeFileHash(filePath: string): Promise<string> {
     stream.on('end', () => resolve(hash.digest('hex').slice(0, 16)));
     stream.on('error', reject);
   });
-}
-
-function getCompressionMethodFromArchive(archivePath: string): CompressionMethod {
-  if (archivePath.endsWith('.tar.zst') || archivePath.endsWith('.zst')) {
-    return 'zstd';
-  }
-  return 'gzip';
-}
-
-async function compressWithMethod(
-  inputPath: string,
-  outputPath: string,
-  method: CompressionMethod
-): Promise<void> {
-  if (method === 'zstd') {
-    await exec.exec('zstd', ['-f', '-T0', '--long=30', '-o', outputPath, inputPath]);
-  } else {
-    await exec.exec('gzip', ['-c', inputPath], {
-      outStream: fs.createWriteStream(outputPath),
-    });
-  }
-}
-
-async function decompressWithMethod(
-  inputPath: string,
-  outputPath: string,
-  method: CompressionMethod
-): Promise<void> {
-  if (method === 'zstd') {
-    await exec.exec('zstd', ['-d', '-o', outputPath, inputPath]);
-  } else {
-    await exec.exec('gzip', ['-d', '-c', inputPath], {
-      outStream: fs.createWriteStream(outputPath),
-    });
-  }
 }

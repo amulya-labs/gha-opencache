@@ -16,6 +16,21 @@ inputs:
     description: 'Base path for local cache storage'
     required: false
     default: '/srv/gha-cache/v1'
+  compression:
+    description: 'Compression algorithm: auto, zstd, gzip, or none'
+    required: false
+    default: 'auto'
+  compression-level:
+    description: 'Compression level (1-19 for zstd, 1-9 for gzip). Uses optimal defaults if not specified.'
+    required: false
+  ttl-days:
+    description: 'Days until cache entries expire (0 = no expiration)'
+    required: false
+    default: '30'
+  max-cache-size-gb:
+    description: 'Maximum cache size in GB per repository (0 = unlimited). Uses LRU eviction when exceeded.'
+    required: false
+    default: '10'
 
 outputs: {}
 

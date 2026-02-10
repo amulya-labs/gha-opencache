@@ -8,6 +8,10 @@ export enum Inputs {
   LookupOnly = 'lookup-only',
   SaveAlways = 'save-always',
   CachePath = 'cache-path',
+  Compression = 'compression',
+  CompressionLevel = 'compression-level',
+  TtlDays = 'ttl-days',
+  MaxCacheSizeGb = 'max-cache-size-gb',
 }
 
 export enum Outputs {
@@ -25,7 +29,17 @@ export enum State {
 export const DEFAULT_CACHE_PATH = '/srv/gha-cache/v1';
 export const INDEX_FILE = 'index.json';
 export const ARCHIVES_DIR = 'archives';
-export const INDEX_VERSION = '1';
+export const INDEX_VERSION = '2';
+
+// Compression defaults
+export const DEFAULT_COMPRESSION = 'auto';
+export const DEFAULT_ZSTD_LEVEL = 3;
+export const DEFAULT_GZIP_LEVEL = 6;
+
+// TTL and size defaults
+export const DEFAULT_TTL_DAYS = 30;
+export const DEFAULT_MAX_CACHE_SIZE_GB = 10;
+export const BYTES_PER_GB = 1024 * 1024 * 1024;
 
 export const LOCK_OPTIONS = {
   retries: {
