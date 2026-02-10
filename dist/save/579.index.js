@@ -3,12 +3,12 @@ exports.id = 579;
 exports.ids = [579];
 exports.modules = {
 
-/***/ 6579:
+/***/ 56579:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 
-var utilUtf8 = __webpack_require__(1577);
+var utilUtf8 = __webpack_require__(71577);
 
 class EventStreamSerde {
     marshaller;

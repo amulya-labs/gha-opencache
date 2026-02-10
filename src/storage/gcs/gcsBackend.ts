@@ -1,4 +1,4 @@
-import { Storage, Bucket, File } from '@google-cloud/storage';
+import { Storage, Bucket } from '@google-cloud/storage';
 import { Readable } from 'stream';
 import { StorageBackend, GCSStorageOptions } from '../interfaces';
 import { ARCHIVES_DIR } from '../../constants';
