@@ -1,0 +1,94 @@
+name: Compression Tuning Examples
+# Example: Different compression strategies for various use cases
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#compression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Auto compression (default) - detects zstd, falls back to gzip
+  auto-compression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache with auto compression
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: node_modules
+          key: auto-${{ hashFiles('package-lock.json') }}
+          compression: auto
+
+      - name: Install
+        run: npm ci
+
+  # Maximum compression - slower but smallest size
+  max-compression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache with maximum compression
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: node_modules
+          key: max-${{ hashFiles('package-lock.json') }}
+          compression: zstd
+          compression-level: 19
+
+      - name: Install
+        run: npm ci
+
+  # Fast compression - good for large caches
+  fast-compression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache with fast compression
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: |
+            node_modules
+            .next/cache
+          key: fast-${{ hashFiles('package-lock.json') }}
+          compression: zstd
+          compression-level: 1
+
+      - name: Install
+        run: npm ci
+
+  # No compression - fastest for small or pre-compressed data
+  no-compression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache without compression
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: dist
+          key: dist-${{ github.sha }}
+          compression: none
+
+      - name: Build
+        run: npm run build
+
+  # Gzip compression - maximum compatibility
+  gzip-compression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache with gzip
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.cargo
+          key: cargo-${{ hashFiles('Cargo.lock') }}
+          compression: gzip
+          compression-level: 6
+
+      - name: Build
+        run: cargo build

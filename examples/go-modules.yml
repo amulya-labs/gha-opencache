@@ -1,0 +1,43 @@
+name: Go with Module Cache
+# Example: Caching Go modules and build artifacts
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#examples
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          restore-keys: go-mod-${{ runner.os }}-
+
+      - name: Cache Go build
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('**/*.go') }}
+          restore-keys: go-build-${{ runner.os }}-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...

@@ -1,0 +1,45 @@
+name: Rust with Cargo Cache
+# Example: Caching Rust Cargo registry, index, and build artifacts
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#examples
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-registry-${{ runner.os }}-
+
+      - name: Cache Cargo index
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.cargo/git
+          key: cargo-git-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-git-${{ runner.os }}-
+
+      - name: Cache build artifacts
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: target
+          key: cargo-build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-build-${{ runner.os }}-
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Test
+        run: cargo test

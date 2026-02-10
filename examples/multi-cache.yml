@@ -1,0 +1,55 @@
+name: Multiple Caches
+# Example: Using multiple independent caches in one workflow
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#examples
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Cache 1: npm dependencies (changes infrequently)
+      - name: Cache npm dependencies
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      # Cache 2: Build artifacts (changes frequently)
+      - name: Cache build output
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: dist
+          key: build-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ github.ref }}-
+            build-${{ runner.os }}-
+
+      # Cache 3: Test coverage (per branch)
+      - name: Cache coverage
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: coverage
+          key: coverage-${{ github.ref }}-${{ github.sha }}
+          restore-keys: coverage-${{ github.ref }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test with coverage
+        run: npm run test:coverage

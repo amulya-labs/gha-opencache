@@ -1,0 +1,48 @@
+name: S3 Cache with Cloudflare R2
+# Example: Using Cloudflare R2 S3-compatible storage
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#storage-backends
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache with Cloudflare R2
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: |
+            node_modules
+            .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nextjs-${{ runner.os }}-
+
+          storage-provider: s3
+          s3-bucket: my-gha-cache-bucket
+          s3-endpoint: https://abc123.r2.cloudflarestorage.com  # Replace with your account ID
+          s3-region: auto
+          s3-force-path-style: false
+          compression: zstd
+          ttl-days: 14
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build

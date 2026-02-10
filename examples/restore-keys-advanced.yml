@@ -1,0 +1,67 @@
+name: Advanced restore-keys Patterns
+# Example: Advanced restore-keys patterns for different use cases
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#restore-keys-behavior
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Multi-level fallback: OS-specific → any OS
+      - name: Cache with multi-level fallback
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+            npm-
+
+      # Branch-aware: same branch → main → any
+      - name: Cache with branch awareness
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: .next/cache
+          key: nextjs-${{ github.ref }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            nextjs-${{ github.ref }}-
+            nextjs-refs/heads/main-
+            nextjs-
+
+      # Version-specific: exact version → major version → any
+      - name: Cache with version fallback
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.npm
+          key: npm-global-${{ runner.os }}-node${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-global-${{ runner.os }}-node${{ matrix.node-version }}-
+            npm-global-${{ runner.os }}-node20-
+            npm-global-${{ runner.os }}-
+
+      # Time-based: weekly rotation with fallback
+      - name: Cache with weekly rotation
+        uses: rrl-personal-projects/actions-opencache@v1
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-week${{ github.run_number / 50 }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-week${{ github.run_number / 50 }}-
+            pip-${{ runner.os }}-
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
