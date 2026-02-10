@@ -12,6 +12,7 @@
     "package:save-only": "ncc build src/save-only.ts -o dist/save-only --license licenses.txt",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
     "lint": "eslint src __tests__ --ext .ts",
     "lint:fix": "eslint src __tests__ --ext .ts --fix",
     "format": "prettier --write 'src/**/*.ts' '__tests__/**/*.ts'",

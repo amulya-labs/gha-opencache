@@ -65,7 +65,6 @@ body:
         - Local filesystem
         - AWS S3
         - Google Cloud Storage (GCS)
-        - Azure Blob Storage
         - Other (specify in description)
     validations:
       required: true
