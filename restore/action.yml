@@ -23,10 +23,38 @@ inputs:
     description: 'Check if a cache entry exists without downloading'
     required: false
     default: 'false'
+
+  # Storage provider selection
+  storage-provider:
+    description: 'Storage backend: local, s3'
+    required: false
+    default: 'local'
+
+  # Local provider options
   cache-path:
     description: 'Base path for local cache storage'
     required: false
     default: '/srv/gha-cache/v1'
+
+  # S3 provider options
+  s3-bucket:
+    description: 'S3 bucket name (required for s3 provider)'
+    required: false
+  s3-region:
+    description: 'S3 region'
+    required: false
+    default: 'us-east-1'
+  s3-endpoint:
+    description: 'Custom S3 endpoint (for MinIO, R2, DigitalOcean Spaces, etc.)'
+    required: false
+  s3-prefix:
+    description: 'Key prefix within bucket'
+    required: false
+    default: 'gha-cache/'
+  s3-force-path-style:
+    description: 'Use path-style URLs (required for MinIO)'
+    required: false
+    default: 'false'
 
 outputs:
   cache-hit:

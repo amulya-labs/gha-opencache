@@ -1,6 +1,11 @@
 import * as core from '@actions/core';
-import { createLocalStorageProvider } from './storage/localProvider';
-import { getRestoreInputs, getRepoInfo, isExactKeyMatch } from './utils/actionUtils';
+import { createStorageProvider } from './storage/factory';
+import {
+  getRestoreInputs,
+  getRepoInfo,
+  isExactKeyMatch,
+  createRestoreStorageConfig,
+} from './utils/actionUtils';
 import { IStateProvider } from './utils/stateProvider';
 import { Outputs, State } from './constants';
 
@@ -17,8 +22,11 @@ export async function restoreCache(stateProvider: IStateProvider): Promise<Resto
   if (inputs.restoreKeys.length > 0) {
     core.info(`Restore keys: ${inputs.restoreKeys.join(', ')}`);
   }
+  core.info(`Storage provider: ${inputs.storageProvider}`);
 
-  const storage = createLocalStorageProvider(inputs.cachePath, owner, repo);
+  // Create storage provider using factory
+  const storageConfig = createRestoreStorageConfig(inputs, owner, repo);
+  const storage = await createStorageProvider(storageConfig);
 
   // Save primary key in state for post action
   stateProvider.saveState(State.CachePrimaryKey, inputs.key);
