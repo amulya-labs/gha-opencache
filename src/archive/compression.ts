@@ -2,6 +2,8 @@ import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as core from '@actions/core';
 import * as fs from 'fs';
+import * as zlib from 'zlib';
+import { pipeline } from 'stream/promises';
 import { DEFAULT_ZSTD_LEVEL, DEFAULT_GZIP_LEVEL } from '../constants';
 
 export type CompressionMethod = 'zstd' | 'gzip' | 'none';
@@ -28,7 +30,8 @@ export async function detectCompressionMethod(): Promise<CompressionMethod> {
  * Check if a specific compression tool is available
  */
 export async function isCompressionAvailable(method: CompressionMethod): Promise<boolean> {
-  if (method === 'none') {
+  if (method === 'none' || method === 'gzip') {
+    // gzip is handled via Node.js zlib, always available
     return true;
   }
   try {
@@ -52,7 +55,7 @@ export async function resolveCompressionMethod(
   } else {
     method = options.method;
     // Validate that the explicit method is available
-    if (method !== 'none') {
+    if (method !== 'none' && method !== 'gzip') {
       const available = await isCompressionAvailable(method);
       if (!available) {
         throw new Error(
@@ -115,10 +118,10 @@ export async function compressArchive(
       tarPath,
     ]);
   } else if (method === 'gzip') {
+    // Use Node.js zlib for reliable cross-platform gzip compression
     const compressionLevel = level ?? DEFAULT_GZIP_LEVEL;
-    await exec.exec('gzip', [`-${compressionLevel}`, '-c', tarPath], {
-      outStream: fs.createWriteStream(outputPath),
-    });
+    const gzip = zlib.createGzip({ level: compressionLevel });
+    await pipeline(fs.createReadStream(tarPath), gzip, fs.createWriteStream(outputPath));
   } else {
     // none - just copy the tar file
     await fs.promises.copyFile(tarPath, outputPath);
@@ -133,9 +136,9 @@ export async function decompressArchive(
   if (method === 'zstd') {
     await exec.exec('zstd', ['-d', '-o', outputPath, archivePath]);
   } else if (method === 'gzip') {
-    await exec.exec('gzip', ['-d', '-c', archivePath], {
-      outStream: fs.createWriteStream(outputPath),
-    });
+    // Use Node.js zlib for reliable cross-platform gzip decompression
+    const gunzip = zlib.createGunzip();
+    await pipeline(fs.createReadStream(archivePath), gunzip, fs.createWriteStream(outputPath));
   } else {
     // none - just copy the tar file
     await fs.promises.copyFile(archivePath, outputPath);

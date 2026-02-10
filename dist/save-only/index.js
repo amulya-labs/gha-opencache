@@ -61168,6 +61168,8 @@ const exec = __importStar(__nccwpck_require__(5236));
 const io = __importStar(__nccwpck_require__(4994));
 const core = __importStar(__nccwpck_require__(7484));
 const fs = __importStar(__nccwpck_require__(9896));
+const zlib = __importStar(__nccwpck_require__(3106));
+const promises_1 = __nccwpck_require__(9786);
 const constants_1 = __nccwpck_require__(7242);
 /**
  * Detect available compression method
@@ -61186,7 +61188,8 @@ async function detectCompressionMethod() {
  * Check if a specific compression tool is available
  */
 async function isCompressionAvailable(method) {
-    if (method === 'none') {
+    if (method === 'none' || method === 'gzip') {
+        // gzip is handled via Node.js zlib, always available
         return true;
     }
     try {
@@ -61208,7 +61211,7 @@ async function resolveCompressionMethod(options) {
     else {
         method = options.method;
         // Validate that the explicit method is available
-        if (method !== 'none') {
+        if (method !== 'none' && method !== 'gzip') {
             const available = await isCompressionAvailable(method);
             if (!available) {
                 throw new Error(`Compression method '${method}' is not available. Please install ${method} or use 'auto' for automatic detection.`);
@@ -61263,10 +61266,10 @@ async function compressArchive(tarPath, outputPath, method, level) {
         ]);
     }
     else if (method === 'gzip') {
+        // Use Node.js zlib for reliable cross-platform gzip compression
         const compressionLevel = level ?? constants_1.DEFAULT_GZIP_LEVEL;
-        await exec.exec('gzip', [`-${compressionLevel}`, '-c', tarPath], {
-            outStream: fs.createWriteStream(outputPath),
-        });
+        const gzip = zlib.createGzip({ level: compressionLevel });
+        await (0, promises_1.pipeline)(fs.createReadStream(tarPath), gzip, fs.createWriteStream(outputPath));
     }
     else {
         // none - just copy the tar file
@@ -61278,9 +61281,9 @@ async function decompressArchive(archivePath, outputPath, method) {
         await exec.exec('zstd', ['-d', '-o', outputPath, archivePath]);
     }
     else if (method === 'gzip') {
-        await exec.exec('gzip', ['-d', '-c', archivePath], {
-            outStream: fs.createWriteStream(outputPath),
-        });
+        // Use Node.js zlib for reliable cross-platform gzip decompression
+        const gunzip = zlib.createGunzip();
+        await (0, promises_1.pipeline)(fs.createReadStream(archivePath), gunzip, fs.createWriteStream(outputPath));
     }
     else {
         // none - just copy the tar file
@@ -62670,6 +62673,14 @@ module.exports = require("querystring");
 
 "use strict";
 module.exports = require("stream");
+
+/***/ }),
+
+/***/ 9786:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("stream/promises");
 
 /***/ }),
 

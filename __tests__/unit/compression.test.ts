@@ -116,9 +116,9 @@ describe('compression', () => {
     });
 
     describe('with explicit gzip', () => {
-      it('uses gzip with default level when available', async () => {
-        mockIo.which.mockResolvedValue('/usr/bin/gzip');
+      // gzip is always available via Node.js zlib, no need to mock io.which
 
+      it('uses gzip with default level', async () => {
         const result = await resolveCompressionMethod({ method: 'gzip' });
 
         expect(result.method).toBe('gzip');
@@ -126,8 +126,6 @@ describe('compression', () => {
       });
 
       it('uses specified compression level', async () => {
-        mockIo.which.mockResolvedValue('/usr/bin/gzip');
-
         const result = await resolveCompressionMethod({ method: 'gzip', level: 9 });
 
         expect(result.method).toBe('gzip');
@@ -135,8 +133,6 @@ describe('compression', () => {
       });
 
       it('clamps invalid gzip level to valid range', async () => {
-        mockIo.which.mockResolvedValue('/usr/bin/gzip');
-
         const result = await resolveCompressionMethod({ method: 'gzip', level: 15 });
 
         expect(result.level).toBe(9);
