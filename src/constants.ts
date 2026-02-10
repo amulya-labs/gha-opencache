@@ -7,7 +7,21 @@ export enum Inputs {
   FailOnCacheMiss = 'fail-on-cache-miss',
   LookupOnly = 'lookup-only',
   SaveAlways = 'save-always',
+
+  // Storage provider selection
+  StorageProvider = 'storage-provider',
+
+  // Local provider options
   CachePath = 'cache-path',
+
+  // S3 provider options
+  S3Bucket = 's3-bucket',
+  S3Region = 's3-region',
+  S3Endpoint = 's3-endpoint',
+  S3Prefix = 's3-prefix',
+  S3ForcePathStyle = 's3-force-path-style',
+
+  // Common options
   Compression = 'compression',
   CompressionLevel = 'compression-level',
   TtlDays = 'ttl-days',
