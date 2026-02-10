@@ -3,681 +3,392 @@
 [![CI](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Drop-in replacement for `actions/cache` with support for local filesystem and S3-compatible storage backends.
+100% API-compatible replacement for `actions/cache` with local filesystem and S3-compatible storage support for self-hosted runners.
 
-## Table of Contents
+## Why Use This?
 
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Input Reference](#input-reference)
-- [Output Reference](#output-reference)
-- [Storage Backends](#storage-backends)
-- [restore-keys Behavior](#restore-keys-behavior)
-- [Compression](#compression)
-- [Cache Management](#cache-management)
-- [Comparison with actions/cache](#comparison-with-actionscache)
-- [Examples](#examples)
-- [Troubleshooting](#troubleshooting)
-- [Migration Guide](#migration-guide)
-- [License](#license)
-
-## Overview
-
-`actions-opencache` is a 100% API-compatible replacement for GitHub's official `actions/cache` that adds support for:
-
-- **Local filesystem caching** for self-hosted runners
-- **S3-compatible storage** (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, etc.)
-- **Full restore-keys support** with prefix matching and newest-first ordering
-
-### Why Use This Action?
-
-- **Self-hosted runners**: Cache artifacts locally on your runner's filesystem instead of using GitHub's hosted cache service
-- **S3 storage**: Use your own S3-compatible storage for caching across distributed runners
-- **restore-keys**: Unlike some alternatives, this action fully implements `restore-keys` with proper prefix matching
-- **Drop-in replacement**: Same inputs and outputs as `actions/cache` - just change the `uses:` line
+- **Self-hosted runners** - Cache locally instead of GitHub's hosted service
+- **Custom S3 storage** - Use your own S3, MinIO, R2, or compatible storage
+- **Full restore-keys support** - Proper prefix matching with newest-first ordering
+- **Drop-in compatible** - Same API as `actions/cache`
 
 ## Quick Start
 
-### Local Filesystem Storage
-
+**Local filesystem** (default):
 ```yaml
 - uses: rrl-personal-projects/actions-opencache@v1
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-    restore-keys: |
-      npm-${{ runner.os }}-
-      npm-
+    restore-keys: npm-${{ runner.os }}-
 ```
 
-### S3-Compatible Storage (MinIO)
-
+**S3-compatible storage**:
 ```yaml
 - uses: rrl-personal-projects/actions-opencache@v1
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-    restore-keys: |
-      npm-${{ runner.os }}-
-
     storage-provider: s3
-    s3-bucket: github-actions-cache
-    s3-endpoint: https://minio.example.com
-    s3-force-path-style: true
+    s3-bucket: my-cache-bucket
+    s3-endpoint: https://minio.example.com  # or AWS S3, R2, etc.
+    s3-force-path-style: true  # for MinIO
   env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+    AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+    AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
 ```
+
+→ See [MIGRATION.md](MIGRATION.md) for setup instructions
+→ See [examples/](examples/) for more use cases
 
 ## Features
 
-- ✅ **restore-keys prefix matching** - Finds newest cache matching each prefix in order
-- ✅ **Local filesystem storage** - Cache on self-hosted runner disk
-- ✅ **S3-compatible storage** - Use MinIO, AWS S3, Cloudflare R2, etc.
-- ✅ **Configurable compression** - zstd, gzip, or none with tunable levels
-- ✅ **TTL-based expiration** - Automatically remove stale caches
-- ✅ **LRU eviction** - Limit cache size per repository
-- ✅ **Cross-platform** - Linux, macOS, and Windows support
-- ✅ **100% API compatible** - Drop-in replacement for actions/cache
+- ✅ Local filesystem storage for self-hosted runners
+- ✅ S3-compatible storage (AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, etc.)
+- ✅ Full restore-keys prefix matching with newest-first ordering
+- ✅ Configurable compression (zstd, gzip, none) and levels
+- ✅ TTL-based expiration and LRU eviction
+- ✅ Cross-platform (Linux, macOS, Windows)
+- ✅ 100% API compatible with `actions/cache`
 
-## Input Reference
+## Inputs & Outputs
 
-### Standard Inputs
-
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `key` | Primary cache key | Yes | - |
-| `path` | Files/directories to cache (supports wildcards) | Yes | - |
-| `restore-keys` | Ordered fallback keys for cache restoration | No | - |
-| `fail-on-cache-miss` | Fail workflow if no cache found | No | `false` |
-| `lookup-only` | Check cache exists without downloading | No | `false` |
-| `save-always` | Save cache even if job fails | No | `false` |
-
-### Storage Provider Selection
+### Core Inputs
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
+| `key` | Primary cache key | **Yes** | - |
+| `path` | Files/directories to cache (supports wildcards) | **Yes** | - |
+| `restore-keys` | Ordered fallback keys (newline-separated) | No | - |
 | `storage-provider` | Storage backend: `local` or `s3` | No | `local` |
 
-### Local Storage Options
+### Storage Configuration
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `cache-path` | Base directory for local cache storage | No | `/srv/gha-cache/v1` |
+**Local filesystem:**
+- `cache-path` - Base directory (default: `/srv/gha-cache/v1`)
 
-### S3 Storage Options
+**S3-compatible:**
+- `s3-bucket` - Bucket name (required for S3)
+- `s3-endpoint` - Custom endpoint (for MinIO, R2, etc.)
+- `s3-region` - Region (default: `us-east-1`)
+- `s3-prefix` - Key prefix (default: `gha-cache/`)
+- `s3-force-path-style` - Use path-style URLs (required for MinIO)
+- Environment: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `s3-bucket` | S3 bucket name | Yes (for S3) | - |
-| `s3-region` | S3 region | No | `us-east-1` |
-| `s3-endpoint` | Custom S3 endpoint (MinIO, R2, etc.) | No | - |
-| `s3-prefix` | Key prefix within bucket | No | `gha-cache/` |
-| `s3-force-path-style` | Use path-style URLs (required for MinIO) | No | `false` |
-
-**Authentication**: S3 credentials are configured via environment variables:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_SESSION_TOKEN` (optional, for temporary credentials)
-
-### Common Options
-
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `compression` | Compression: `auto`, `zstd`, `gzip`, `none` | No | `auto` |
-| `compression-level` | Compression level (1-19 for zstd, 1-9 for gzip) | No | 3 (zstd), 6 (gzip) |
-| `ttl-days` | Days until cache expires (0 = never) | No | `30` |
-| `max-cache-size-gb` | Max cache size per repo in GB (0 = unlimited) | No | `10` |
-
-## Output Reference
+### Outputs
 
 | Output | Description |
 |--------|-------------|
-| `cache-hit` | `true` if exact match found for primary `key`, `false` otherwise (including restore-keys matches) |
-| `cache-primary-key` | The primary key that was requested |
-| `cache-matched-key` | The actual key that was restored (may differ if restore-keys was used) |
+| `cache-hit` | `true` if exact match for `key`, `false` if restored via `restore-keys` or not found |
+| `cache-primary-key` | The requested primary key |
+| `cache-matched-key` | Actual restored key (differs from primary if `restore-keys` was used) |
 
-### Example: Using Outputs
+<details>
+<summary>Additional Inputs</summary>
 
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  id: cache
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-    restore-keys: npm-
+| Input | Description | Default |
+|-------|-------------|---------|
+| `fail-on-cache-miss` | Fail workflow if no cache found | `false` |
+| `lookup-only` | Check cache exists without downloading | `false` |
+| `save-always` | Save cache even if job fails | `false` |
+| `compression` | Compression method: `auto`, `zstd`, `gzip`, `none` | `auto` |
+| `compression-level` | Compression level (1-19 for zstd, 1-9 for gzip) | 3 (zstd), 6 (gzip) |
+| `ttl-days` | Days until cache expires (0 = never) | `30` |
+| `max-cache-size-gb` | Max cache size per repo in GB (0 = unlimited) | `10` |
 
-- name: Install dependencies
-  if: steps.cache.outputs.cache-hit != 'true'
-  run: npm ci
-
-- name: Show cache info
-  run: |
-    echo "Cache hit: ${{ steps.cache.outputs.cache-hit }}"
-    echo "Primary key: ${{ steps.cache.outputs.cache-primary-key }}"
-    echo "Matched key: ${{ steps.cache.outputs.cache-matched-key }}"
-```
+</details>
 
 ## Storage Backends
 
-### Local Filesystem
+**Local filesystem** (default) - Caches on runner disk at `/srv/gha-cache/v1/`
 
-The local storage backend caches artifacts on the runner's filesystem.
+**S3-compatible** - Works with AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, etc.
 
-#### Directory Structure
+→ See [MIGRATION.md](MIGRATION.md) for setup instructions for each provider
 
+<details>
+<summary>Local Filesystem Details</summary>
+
+**Directory structure:**
 ```
-/srv/gha-cache/v1/
-└── github.com/
-    └── owner/
-        └── repo/
-            ├── index.json       # Cache metadata
-            └── archives/        # Compressed cache files
-                ├── npm-linux-abc123.tar.zst
-                └── npm-linux-def456.tar.zst
+/srv/gha-cache/v1/github.com/owner/repo/
+├── index.json       # Cache metadata
+└── archives/        # Compressed cache files
 ```
 
-#### Setup for Self-Hosted Runners
+**Setup:**
+```bash
+sudo mkdir -p /srv/gha-cache/v1
+sudo chown runner-user:runner-group /srv/gha-cache/v1
+chmod 755 /srv/gha-cache/v1
+```
 
-1. **Create cache directory** (as user that runs the runner):
-   ```bash
-   sudo mkdir -p /srv/gha-cache/v1
-   sudo chown runner-user:runner-group /srv/gha-cache/v1
-   chmod 755 /srv/gha-cache/v1
-   ```
+**Storage estimate:**
+```
+Total = (number of repos) × (max-cache-size-gb per repo)
+```
 
-2. **Permissions**: The runner user must have read/write access to the cache directory.
-
-3. **Storage**: Provision adequate disk space. With default settings (10 GB per repo, 30-day TTL), estimate:
-   ```
-   Total storage = (number of repos) × (max-cache-size-gb)
-   ```
-
-4. **Monitoring**: Set up disk usage alerts to prevent the cache from filling the disk.
-
-#### Custom Cache Path
-
+**Custom path:**
 ```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-    cache-path: /mnt/ssd-cache/gha  # Custom location
+cache-path: /mnt/ssd-cache/gha
 ```
 
-### S3-Compatible Storage
+</details>
 
-The S3 storage backend works with any S3-compatible service.
+<details>
+<summary>S3 Provider Configuration</summary>
 
-#### AWS S3
+All S3-compatible providers use the same basic configuration with provider-specific endpoints:
 
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
+| Provider | endpoint | region | force-path-style |
+|----------|----------|--------|------------------|
+| AWS S3 | (omit) | `us-west-2` | `false` |
+| MinIO | `https://minio.example.com` | `us-east-1` | `true` |
+| Cloudflare R2 | `https://<account-id>.r2.cloudflarestorage.com` | `auto` | `false` |
+| DigitalOcean Spaces | `https://nyc3.digitaloceanspaces.com` | `us-east-1` | `false` |
 
-    storage-provider: s3
-    s3-bucket: my-gha-cache-bucket
-    s3-region: us-west-2
-  env:
-    # Use IAM role (recommended) or access keys
-    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-```
+**Required IAM permissions:**
+- `s3:PutObject`
+- `s3:GetObject`
+- `s3:DeleteObject`
+- `s3:ListBucket`
 
-**IAM Policy Example**:
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:DeleteObject",
-        "s3:ListBucket"
-      ],
-      "Resource": [
-        "arn:aws:s3:::my-gha-cache-bucket",
-        "arn:aws:s3:::my-gha-cache-bucket/*"
-      ]
-    }
-  ]
-}
-```
-
-#### MinIO
-
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-
-    storage-provider: s3
-    s3-bucket: github-actions-cache
-    s3-endpoint: https://minio.example.com
-    s3-region: us-east-1
-    s3-force-path-style: true  # Required for MinIO
-  env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
-```
-
-#### Cloudflare R2
-
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-
-    storage-provider: s3
-    s3-bucket: my-gha-cache-bucket
-    s3-endpoint: https://<account-id>.r2.cloudflarestorage.com
-    s3-region: auto
-  env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-```
-
-#### DigitalOcean Spaces
-
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-
-    storage-provider: s3
-    s3-bucket: my-gha-cache
-    s3-endpoint: https://nyc3.digitaloceanspaces.com
-    s3-region: us-east-1
-  env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_KEY }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET }}
-```
+</details>
 
 ## restore-keys Behavior
 
-The `restore-keys` input provides fallback cache keys when an exact match for the primary `key` is not found.
+Provides fallback cache keys when exact `key` match is not found.
 
-### How It Works
+**Algorithm:**
+1. Try exact match on `key` → If found: `cache-hit = true`
+2. Try each `restore-keys` prefix in order → Find newest matching cache → `cache-hit = false`
+3. No match → `cache-hit = false`, `cache-matched-key` is empty
 
-1. **Try primary key first**: Check for exact match on `key`
-   - If found: Restore cache, set `cache-hit = true`
-
-2. **Try restore-keys in order**: For each restore-key (top to bottom):
-   - Find all caches with keys matching the prefix
-   - Select the **newest** matching cache (by creation time)
-   - Restore it, set `cache-hit = false`, set `cache-matched-key` to the actual key
-
-3. **No match**: If no cache found, `cache-hit = false`, `cache-matched-key` is empty
-
-### Examples
-
-#### Example 1: Exact Match
-
-```yaml
-key: npm-linux-abc123
-restore-keys: |
-  npm-linux-
-  npm-
-
-# Cached keys: npm-linux-abc123, npm-linux-def456
-# Result: Restores npm-linux-abc123 (exact match)
-# cache-hit: true
-```
-
-#### Example 2: Prefix Match
-
-```yaml
-key: npm-linux-xyz999
-restore-keys: |
-  npm-linux-
-  npm-
-
-# Cached keys: npm-linux-abc123, npm-linux-def456
-# Result: Restores npm-linux-def456 (newest with prefix npm-linux-)
-# cache-hit: false
-```
-
-#### Example 3: Multi-Level Fallback
-
+**Example:**
 ```yaml
 key: npm-linux-v20-abc123
 restore-keys: |
+  npm-linux-v20-      # Try newest v20 cache first
+  npm-linux-          # Fall back to any Linux cache
+  npm-                # Fall back to any OS
+```
+
+**Best practices:**
+- Order from specific to general
+- Include `${{ runner.os }}` to prevent cross-platform mismatches
+- Include version identifiers for graceful degradation
+
+→ See [examples/restore-keys-advanced.yml](examples/restore-keys-advanced.yml) for more patterns
+
+<details>
+<summary>Detailed Examples</summary>
+
+**Exact match:**
+```yaml
+key: npm-linux-abc123
+restore-keys: npm-linux-
+# Cached: npm-linux-abc123, npm-linux-def456
+# Restores: npm-linux-abc123 (exact)
+# cache-hit: true
+```
+
+**Prefix match:**
+```yaml
+key: npm-linux-xyz999  # doesn't exist
+restore-keys: npm-linux-
+# Cached: npm-linux-abc123 (older), npm-linux-def456 (newer)
+# Restores: npm-linux-def456 (newest with prefix)
+# cache-hit: false
+```
+
+**Multi-level fallback:**
+```yaml
+key: npm-linux-v20-new
+restore-keys: |
   npm-linux-v20-
   npm-linux-
-  npm-
-
-# Cached keys: npm-darwin-xyz, npm-linux-v18-old, npm-linux-v20-old
-# Result: Restores npm-linux-v20-old (newest matching first restore-key)
+# Cached: npm-linux-v18-old, npm-linux-v20-old
+# Restores: npm-linux-v20-old (matches first restore-key)
 # cache-hit: false
 ```
 
-#### Example 4: No Match
-
+**No match:**
 ```yaml
-key: python-linux-abc123
-restore-keys: |
-  python-linux-
-  python-
-
-# Cached keys: npm-linux-abc123, go-linux-def456
-# Result: No cache restored
-# cache-hit: false
-# cache-matched-key: ""
+key: python-abc123
+restore-keys: python-
+# Cached: npm-linux-abc123, go-linux-def456
+# Restores: (nothing)
+# cache-hit: false, cache-matched-key: ""
 ```
 
-### Best Practices
-
-1. **Order matters**: Put more specific prefixes first
-2. **Include OS**: `npm-${{ runner.os }}-` prevents mismatches across platforms
-3. **Include version**: `npm-linux-v20-` allows fallback to different Node versions
-4. **Broad fallback**: End with a generic prefix like `npm-` for maximum reuse
+</details>
 
 ## Compression
 
-### Available Methods
-
-| Method | Speed | Ratio | Notes |
-|--------|-------|-------|-------|
-| `auto` | - | - | Detects `zstd`, falls back to `gzip` (default) |
-| `zstd` | Fast | Excellent | Best choice for most use cases |
+| Method | Speed | Ratio | Use Case |
+|--------|-------|-------|----------|
+| `auto` | - | - | Default - detects zstd, falls back to gzip |
+| `zstd` | Fast | Excellent | Best for most use cases |
 | `gzip` | Moderate | Good | Maximum compatibility |
-| `none` | Fastest | N/A | For pre-compressed or small files |
+| `none` | Fastest | N/A | Pre-compressed files |
 
-### Auto-Detection
+**Compression levels:**
+- zstd: 1-19 (default: 3)
+- gzip: 1-9 (default: 6)
 
-The `auto` compression mode (default) works as follows:
-
-1. Check if `zstd` command is available on the runner
-2. If yes: use `zstd` with level 3
-3. If no: fall back to `gzip` with level 6
-
-### Compression Levels
-
-**zstd** (1-19):
-- `1-3`: Fast compression, good for large caches
-- `3-9`: Balanced (default: 3)
-- `10-19`: Maximum compression, slower
-
-**gzip** (1-9):
-- `1-3`: Fast compression
-- `4-6`: Balanced (default: 6)
-- `7-9`: Maximum compression, slower
-
-### Examples
-
-#### Fast Compression (Large Caches)
-
+**Examples:**
 ```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-    compression: zstd
-    compression-level: 1  # Fastest
+compression: zstd
+compression-level: 1    # Fast for large caches
+
+compression: zstd
+compression-level: 19   # Best ratio for slow networks
+
+compression: none       # Skip for pre-compressed data
 ```
 
-#### Maximum Compression (Slow Network)
-
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: dist
-    key: build-${{ github.sha }}
-    compression: zstd
-    compression-level: 19  # Best ratio
-```
-
-#### No Compression (Pre-compressed Files)
-
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: |
-      dist/**/*.gz
-      dist/**/*.br
-    key: assets-${{ github.sha }}
-    compression: none  # Already compressed
-```
+→ See [examples/compression-tuning.yml](examples/compression-tuning.yml) for detailed examples
 
 ## Cache Management
 
-### TTL-Based Expiration
+**TTL expiration** - Caches auto-delete after `ttl-days` (default: 30, set 0 to disable)
 
-Caches are automatically deleted after the specified TTL (time-to-live).
+**LRU eviction** - When size exceeds `max-cache-size-gb`, least-recently-used caches are removed (default: 10 GB per repo, set 0 to disable)
 
-```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-    ttl-days: 7  # Delete after 7 days
-```
-
-- **Default**: 30 days
-- **Disable**: Set to `0` for no expiration
-- **Use cases**:
-  - Short TTL (7 days) for frequently changing dependencies
-  - Long TTL (90 days) for stable dependencies
-  - No expiration for immutable build artifacts
-
-### LRU Eviction
-
-When cache size exceeds `max-cache-size-gb`, the least-recently-used caches are evicted.
+**Repository isolation** - Each repo has isolated cache namespace, preventing key collisions
 
 ```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
-  with:
-    path: node_modules
-    key: npm-${{ hashFiles('package-lock.json') }}
-    max-cache-size-gb: 20  # Limit to 20 GB per repository
+ttl-days: 7              # Delete after 7 days
+max-cache-size-gb: 20    # Limit to 20 GB per repo
 ```
 
-- **Default**: 10 GB per repository
-- **Disable**: Set to `0` for unlimited size
-- **Scope**: Enforced per repository (not global)
-
-### Repository Isolation
-
-Each repository gets its own isolated cache namespace:
-
-```
-/srv/gha-cache/v1/github.com/owner/repo-a/  # Independent
-/srv/gha-cache/v1/github.com/owner/repo-b/  # Independent
-```
-
-This ensures:
-- No key collisions between repositories
-- Independent size limits
-- Easier cleanup and management
-
-## Comparison with actions/cache
+## vs actions/cache
 
 | Feature | actions/cache | actions-opencache |
 |---------|---------------|-------------------|
-| **Hosted cache** | ✅ GitHub-hosted | ❌ Not supported |
-| **Local filesystem** | ❌ Not supported | ✅ Yes |
-| **S3-compatible storage** | ❌ Not supported | ✅ Yes (MinIO, R2, etc.) |
-| **restore-keys** | ✅ Yes | ✅ Yes (full support) |
-| **Input compatibility** | ✅ - | ✅ 100% compatible |
-| **Output compatibility** | ✅ - | ✅ 100% compatible |
-| **Cross-platform** | ✅ Linux, macOS, Windows | ✅ Linux, macOS, Windows |
-| **Compression** | ✅ zstd | ✅ zstd, gzip, none |
-| **TTL expiration** | ✅ 7 days (fixed) | ✅ Configurable |
-| **Size limits** | ✅ 10 GB (fixed) | ✅ Configurable |
+| GitHub-hosted cache | ✅ | ❌ |
+| Local filesystem | ❌ | ✅ |
+| S3-compatible storage | ❌ | ✅ |
+| API compatibility | - | ✅ 100% |
+| restore-keys | ✅ | ✅ |
+| Compression | zstd only | zstd, gzip, none |
+| TTL / Size limits | Fixed | Configurable |
 
-### When to Use actions/cache
+**Use actions/cache if:** GitHub-hosted runners, no custom storage needed
 
-- Using GitHub-hosted runners
-- No need for custom storage
-- Want GitHub's built-in cache analytics
-
-### When to Use actions-opencache
-
-- Using self-hosted runners
-- Need local filesystem caching
-- Want to use your own S3-compatible storage
-- Need configurable TTL and size limits
-- Want full control over cache storage
+**Use actions-opencache if:** Self-hosted runners, local filesystem or S3 storage, need configurable limits
 
 ## Examples
 
-See the [`examples/`](examples/) directory for complete workflow examples:
+Complete workflow examples in [`examples/`](examples/):
 
-- [`node-basic.yml`](examples/node-basic.yml) - Basic Node.js caching
-- [`python-pip.yml`](examples/python-pip.yml) - Python pip cache
-- [`go-modules.yml`](examples/go-modules.yml) - Go modules cache
-- [`rust-cargo.yml`](examples/rust-cargo.yml) - Rust Cargo cache
-- [`s3-minio.yml`](examples/s3-minio.yml) - S3 with MinIO backend
-- [`s3-cloudflare-r2.yml`](examples/s3-cloudflare-r2.yml) - Cloudflare R2 backend
-- [`multi-cache.yml`](examples/multi-cache.yml) - Multiple caches in one workflow
-- [`restore-keys-advanced.yml`](examples/restore-keys-advanced.yml) - Advanced restore-keys patterns
-- [`compression-tuning.yml`](examples/compression-tuning.yml) - Compression tuning examples
+**Language-specific:**
+[Node.js](examples/node-basic.yml) • [Python](examples/python-pip.yml) • [Go](examples/go-modules.yml) • [Rust](examples/rust-cargo.yml)
+
+**Storage backends:**
+[MinIO](examples/s3-minio.yml) • [Cloudflare R2](examples/s3-cloudflare-r2.yml)
+
+**Advanced usage:**
+[Multiple caches](examples/multi-cache.yml) • [restore-keys patterns](examples/restore-keys-advanced.yml) • [Compression tuning](examples/compression-tuning.yml)
 
 ## Troubleshooting
 
+**Enable debug logging:**
+```yaml
+env:
+  ACTIONS_STEP_DEBUG: true
+```
+
+**Common issues:**
+- Cache not restoring → Check key formatting, verify `restore-keys` prefixes
+- Permission denied → Ensure runner user owns cache directory (`chown runner-user /srv/gha-cache/v1`)
+- S3 auth failures → Verify credentials in secrets, check IAM permissions
+- Cache too large → Reduce `max-cache-size-gb` or `ttl-days`
+- Slow operations → Use faster compression (`compression-level: 1`) or `compression: none`
+- Cross-platform issues → Include `${{ runner.os }}` in cache key
+
+<details>
+<summary>Detailed Troubleshooting</summary>
+
 ### Cache Not Restoring
 
-**Problem**: Cache is not being restored even though it should exist.
+Debug cache key:
+```yaml
+- run: echo "Key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}"
+```
 
-**Solutions**:
-1. Check cache key matches exactly:
-   ```yaml
-   - name: Debug cache key
-     run: echo "Key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}"
-   ```
+Check local storage:
+```bash
+ls -la /srv/gha-cache/v1/github.com/owner/repo/
+```
 
-2. Verify restore-keys prefixes are correct (no trailing slashes or extra characters)
+Verify restore-keys have no trailing slashes or extra characters.
 
-3. For local storage, check directory permissions:
-   ```bash
-   ls -la /srv/gha-cache/v1
-   ```
+### Permission Denied
 
-4. Enable debug logging:
-   ```yaml
-   env:
-     ACTIONS_STEP_DEBUG: true
-   ```
+```bash
+sudo chown -R runner-user:runner-group /srv/gha-cache/v1
+chmod 755 /srv/gha-cache/v1
+```
 
-### Permission Denied (Local Storage)
+### S3 Authentication
 
-**Problem**: `EACCES: permission denied` when saving or restoring cache.
+Verify secrets are set:
+```yaml
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+```
 
-**Solutions**:
-1. Ensure runner user owns the cache directory:
-   ```bash
-   sudo chown -R runner-user:runner-group /srv/gha-cache/v1
-   ```
+Check IAM policy includes: `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`, `s3:ListBucket`
 
-2. Check directory permissions (755 minimum):
-   ```bash
-   chmod 755 /srv/gha-cache/v1
-   ```
+For MinIO: `s3-force-path-style: true` required
 
-### S3 Authentication Failures
+### Cache Size Too Large
 
-**Problem**: `Access Denied` or `403 Forbidden` errors with S3.
+```yaml
+max-cache-size-gb: 5   # Reduce from default 10 GB
+ttl-days: 7             # Reduce from default 30 days
+compression-level: 9    # Increase compression
+```
 
-**Solutions**:
-1. Verify credentials are set correctly:
-   ```yaml
-   env:
-     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-   ```
+Manual cleanup:
+```bash
+find /srv/gha-cache/v1 -type f -mtime +30 -delete
+```
 
-2. Check IAM policy allows required actions (PutObject, GetObject, DeleteObject, ListBucket)
+### Slow Cache Operations
 
-3. For MinIO, ensure `s3-force-path-style: true` is set
+```yaml
+compression: zstd
+compression-level: 1    # Fastest compression
 
-4. Verify bucket exists and region is correct
+# or
+compression: none       # Skip compression
+```
 
-### Cache Size Growing Too Large
+Split large caches into multiple smaller ones.
 
-**Problem**: Cache directory consuming too much disk space.
+For S3: ensure good network connectivity to endpoint.
 
-**Solutions**:
-1. Reduce `max-cache-size-gb`:
-   ```yaml
-   max-cache-size-gb: 5  # Reduce from default 10 GB
-   ```
+### Cross-Platform Mismatches
 
-2. Reduce `ttl-days`:
-   ```yaml
-   ttl-days: 7  # Delete after 1 week instead of 30 days
-   ```
+Always include OS in key:
+```yaml
+key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+restore-keys: npm-${{ runner.os }}-
+```
 
-3. Use more aggressive compression:
-   ```yaml
-   compression: zstd
-   compression-level: 9
-   ```
+Avoid caching platform-specific binaries.
 
-4. Manually clean up old caches:
-   ```bash
-   # Find caches older than 30 days
-   find /srv/gha-cache/v1 -type f -mtime +30 -delete
-   ```
+</details>
 
-### Slow Cache Save/Restore
+## Documentation
 
-**Problem**: Cache operations taking too long.
-
-**Solutions**:
-1. Use faster compression:
-   ```yaml
-   compression: zstd
-   compression-level: 1  # Fastest
-   ```
-
-2. Disable compression for pre-compressed data:
-   ```yaml
-   compression: none
-   ```
-
-3. Split large caches into multiple smaller caches
-
-4. For S3, ensure runner has good network connection to S3 endpoint
-
-### Cross-Platform Cache Mismatches
-
-**Problem**: Cache from one OS doesn't work on another.
-
-**Solutions**:
-1. Include OS in cache key:
-   ```yaml
-   key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-   ```
-
-2. Use separate caches per platform:
-   ```yaml
-   restore-keys: |
-     npm-${{ runner.os }}-
-   ```
-
-3. Avoid caching platform-specific binaries (use `.gitignore` patterns in `path`)
-
-## Migration Guide
-
-See [MIGRATION.md](MIGRATION.md) for detailed migration instructions from `actions/cache`.
+- [MIGRATION.md](MIGRATION.md) - Migration from `actions/cache` and infrastructure setup
+- [examples/](examples/) - Complete workflow examples
+- [Issues](https://github.com/rrl-personal-projects/actions-opencache/issues) - Bug reports and feature requests
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or pull request.
-
-## Support
-
-- [GitHub Issues](https://github.com/rrl-personal-projects/actions-opencache/issues)
-- [Discussions](https://github.com/rrl-personal-projects/actions-opencache/discussions)
+MIT - see [LICENSE](LICENSE)

@@ -1,4 +1,6 @@
 name: Python with pip Cache
+# Example: Python pip package caching with multi-level restore-keys
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#examples
 
 on:
   push:
@@ -17,7 +19,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Cache pip packages
       - name: Cache pip packages
         uses: rrl-personal-projects/actions-opencache@v1
         with:

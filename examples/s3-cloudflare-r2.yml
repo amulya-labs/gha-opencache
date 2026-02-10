@@ -1,4 +1,6 @@
 name: S3 Cache with Cloudflare R2
+# Example: Using Cloudflare R2 S3-compatible storage
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#storage-backends
 
 on:
   push:
@@ -17,7 +19,6 @@ jobs:
         with:
           node-version: '20'
 
-      # Use Cloudflare R2 as S3-compatible storage
       - name: Cache with Cloudflare R2
         uses: rrl-personal-projects/actions-opencache@v1
         with:
@@ -29,19 +30,14 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
             nextjs-${{ runner.os }}-
 
-          # Cloudflare R2 configuration
           storage-provider: s3
           s3-bucket: my-gha-cache-bucket
-          # R2 endpoint format: https://<account-id>.r2.cloudflarestorage.com
-          s3-endpoint: https://abc123.r2.cloudflarestorage.com
+          s3-endpoint: https://abc123.r2.cloudflarestorage.com  # Replace with your account ID
           s3-region: auto
-
-          # R2-specific settings
           s3-force-path-style: false
           compression: zstd
           ttl-days: 14
         env:
-          # R2 API tokens (create in Cloudflare dashboard)
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 

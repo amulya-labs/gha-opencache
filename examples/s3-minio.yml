@@ -1,4 +1,6 @@
 name: S3 Cache with MinIO
+# Example: Using MinIO S3-compatible storage backend
+# Docs: https://github.com/rrl-personal-projects/actions-opencache#storage-backends
 
 on:
   push:
@@ -17,27 +19,21 @@ jobs:
         with:
           node-version: '20'
 
-      # Use S3-compatible MinIO storage backend
       - name: Cache with MinIO
         uses: rrl-personal-projects/actions-opencache@v1
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            npm-${{ runner.os }}-
+          restore-keys: npm-${{ runner.os }}-
 
-          # S3 provider configuration
           storage-provider: s3
           s3-bucket: github-actions-cache
           s3-endpoint: https://minio.example.com
           s3-region: us-east-1
           s3-force-path-style: true  # Required for MinIO
-
-          # Optional: customize prefix and TTL
           s3-prefix: my-project/
           ttl-days: 7
         env:
-          # Configure S3 credentials via environment variables
           AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
 
