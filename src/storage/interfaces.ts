@@ -99,6 +99,22 @@ export interface S3StorageOptions {
 }
 
 /**
+ * Options for Google Cloud Storage
+ */
+export interface GCSStorageOptions {
+  /** GCS bucket name */
+  bucket: string;
+  /** GCP project ID (optional, uses default from credentials) */
+  projectId?: string;
+  /** Path to service account key JSON file (optional, uses ADC if not provided) */
+  keyFilename?: string;
+  /** Service account credentials object (optional, uses ADC if not provided) */
+  credentials?: { client_email: string; private_key: string };
+  /** Key prefix within bucket (default: 'gha-cache/') */
+  prefix?: string;
+}
+
+/**
  * Options for custom storage provider
  */
 export interface CustomStorageOptions {
@@ -109,14 +125,18 @@ export interface CustomStorageOptions {
 /**
  * Union type for all storage options
  */
-export type StorageOptions = LocalStorageOptions | S3StorageOptions | CustomStorageOptions;
+export type StorageOptions =
+  | LocalStorageOptions
+  | S3StorageOptions
+  | GCSStorageOptions
+  | CustomStorageOptions;
 
 /**
  * Configuration for storage provider instantiation
  */
 export interface StorageProviderConfig {
   /** Storage provider type */
-  type: 'local' | 's3' | 'custom';
+  type: 'local' | 's3' | 'gcs' | 'custom';
   /** Repository owner */
   owner: string;
   /** Repository name */

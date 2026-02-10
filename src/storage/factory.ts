@@ -3,6 +3,7 @@ import {
   StorageProviderConfig,
   LocalStorageOptions,
   S3StorageOptions,
+  GCSStorageOptions,
   CustomStorageOptions,
 } from './interfaces';
 import {
@@ -10,6 +11,7 @@ import {
   LocalStorageOptions as LocalProviderOptions,
 } from './local/localProvider';
 import { createS3StorageProvider, S3ProviderOptions } from './s3/s3Provider';
+import { createGCSStorageProvider, GCSProviderOptions } from './gcs/gcsProvider';
 import { CompressionOptions } from '../archive/compression';
 
 /**
@@ -81,6 +83,16 @@ export async function createStorageProvider(
       return createS3StorageProvider(s3Options, owner, repo, providerOptions);
     }
 
+    case 'gcs': {
+      const gcsOptions = options as GCSStorageOptions;
+      const providerOptions: GCSProviderOptions = {
+        ttlDays,
+        maxCacheSizeGb,
+        compression: compressionOptions,
+      };
+      return createGCSStorageProvider(gcsOptions, owner, repo, providerOptions);
+    }
+
     case 'custom': {
       const customOptions = options as CustomStorageOptions;
       if (!customOptions.createProvider) {
@@ -97,8 +109,8 @@ export async function createStorageProvider(
 /**
  * Check if a storage type is valid
  */
-export function isValidStorageType(type: string): type is 'local' | 's3' | 'custom' {
-  return ['local', 's3', 'custom'].includes(type);
+export function isValidStorageType(type: string): type is 'local' | 's3' | 'gcs' | 'custom' {
+  return ['local', 's3', 'gcs', 'custom'].includes(type);
 }
 
 /**

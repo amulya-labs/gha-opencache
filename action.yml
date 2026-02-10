@@ -30,7 +30,7 @@ inputs:
 
   # Storage provider selection
   storage-provider:
-    description: 'Storage backend: local, s3'
+    description: 'Storage backend: local, s3, gcs'
     required: false
     default: 'local'
 
@@ -59,6 +59,21 @@ inputs:
     description: 'Use path-style URLs (required for MinIO)'
     required: false
     default: 'false'
+
+  # GCS provider options
+  gcs-bucket:
+    description: 'GCS bucket name (required for gcs provider)'
+    required: false
+  gcs-project:
+    description: 'GCP project ID (optional, uses default from credentials)'
+    required: false
+  gcs-prefix:
+    description: 'Key prefix within bucket'
+    required: false
+    default: 'gha-cache/'
+  gcs-key-file:
+    description: 'Path to service account key JSON file'
+    required: false
 
   # Common options
   compression:

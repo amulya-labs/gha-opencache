@@ -11,12 +11,13 @@ import {
   StorageProviderConfig,
   LocalStorageOptions,
   S3StorageOptions,
+  GCSStorageOptions,
 } from '../storage/interfaces';
 
 /**
  * Storage provider type
  */
-export type StorageProviderType = 'local' | 's3';
+export type StorageProviderType = 'local' | 's3' | 'gcs';
 
 /**
  * S3 provider inputs
@@ -29,6 +30,16 @@ export interface S3Inputs {
   forcePathStyle: boolean;
 }
 
+/**
+ * GCS provider inputs
+ */
+export interface GCSInputs {
+  bucket: string;
+  projectId?: string;
+  keyFile?: string;
+  prefix: string;
+}
+
 export interface ActionInputs {
   key: string;
   paths: string[];
@@ -39,6 +50,7 @@ export interface ActionInputs {
   storageProvider: StorageProviderType;
   cachePath: string;
   s3: S3Inputs;
+  gcs: GCSInputs;
   compression: CompressionOptions;
   ttlDays: number;
   maxCacheSizeGb: number;
@@ -54,6 +66,7 @@ export type RestoreInputs = Pick<
   | 'storageProvider'
   | 'cachePath'
   | 's3'
+  | 'gcs'
 >;
 
 export type SaveInputs = Pick<
@@ -63,6 +76,7 @@ export type SaveInputs = Pick<
   | 'storageProvider'
   | 'cachePath'
   | 's3'
+  | 'gcs'
   | 'compression'
   | 'ttlDays'
   | 'maxCacheSizeGb'
@@ -195,8 +209,10 @@ function parseStorageProvider(): StorageProviderType {
   const value = core.getInput(Inputs.StorageProvider) || 'local';
   const normalized = value.toLowerCase().trim();
 
-  if (normalized !== 'local' && normalized !== 's3') {
-    core.warning(`Invalid storage-provider '${value}'. Valid values: local, s3. Using 'local'.`);
+  if (normalized !== 'local' && normalized !== 's3' && normalized !== 'gcs') {
+    core.warning(
+      `Invalid storage-provider '${value}'. Valid values: local, s3, gcs. Using 'local'.`
+    );
     return 'local';
   }
 
@@ -217,12 +233,34 @@ function parseS3Inputs(): S3Inputs {
 }
 
 /**
+ * Parse GCS inputs
+ */
+function parseGCSInputs(): GCSInputs {
+  return {
+    bucket: core.getInput(Inputs.GCSBucket) || '',
+    projectId: core.getInput(Inputs.GCSProject) || undefined,
+    keyFile: core.getInput(Inputs.GCSKeyFile) || undefined,
+    prefix: core.getInput(Inputs.GCSPrefix) || 'gha-cache/',
+  };
+}
+
+/**
  * Validate S3 inputs
  * Throws if S3 provider is selected but bucket is not specified
  */
 function validateS3Inputs(storageProvider: StorageProviderType, s3: S3Inputs): void {
   if (storageProvider === 's3' && !s3.bucket) {
     throw new Error('s3-bucket is required when using s3 storage provider');
+  }
+}
+
+/**
+ * Validate GCS inputs
+ * Throws if GCS provider is selected but bucket is not specified
+ */
+function validateGCSInputs(storageProvider: StorageProviderType, gcs: GCSInputs): void {
+  if (storageProvider === 'gcs' && !gcs.bucket) {
+    throw new Error('gcs-bucket is required when using gcs storage provider');
   }
 }
 
@@ -236,12 +274,14 @@ export function getInputs(): ActionInputs {
   const storageProvider = parseStorageProvider();
   const cachePath = core.getInput(Inputs.CachePath) || DEFAULT_CACHE_PATH;
   const s3 = parseS3Inputs();
+  const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();
   const ttlDays = parseTtlDays();
   const maxCacheSizeGb = parseMaxCacheSizeGb();
 
-  // Validate S3 inputs if S3 provider is selected
+  // Validate provider-specific inputs
   validateS3Inputs(storageProvider, s3);
+  validateGCSInputs(storageProvider, gcs);
 
   return {
     key,
@@ -253,6 +293,7 @@ export function getInputs(): ActionInputs {
     storageProvider,
     cachePath,
     s3,
+    gcs,
     compression,
     ttlDays,
     maxCacheSizeGb,
@@ -268,9 +309,11 @@ export function getRestoreInputs(): RestoreInputs {
   const storageProvider = parseStorageProvider();
   const cachePath = core.getInput(Inputs.CachePath) || DEFAULT_CACHE_PATH;
   const s3 = parseS3Inputs();
+  const gcs = parseGCSInputs();
 
-  // Validate S3 inputs if S3 provider is selected
+  // Validate provider-specific inputs
   validateS3Inputs(storageProvider, s3);
+  validateGCSInputs(storageProvider, gcs);
 
   return {
     key,
@@ -281,6 +324,7 @@ export function getRestoreInputs(): RestoreInputs {
     storageProvider,
     cachePath,
     s3,
+    gcs,
   };
 }
 
@@ -290,14 +334,16 @@ export function getSaveInputs(): SaveInputs {
   const storageProvider = parseStorageProvider();
   const cachePath = core.getInput(Inputs.CachePath) || DEFAULT_CACHE_PATH;
   const s3 = parseS3Inputs();
+  const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();
   const ttlDays = parseTtlDays();
   const maxCacheSizeGb = parseMaxCacheSizeGb();
 
-  // Validate S3 inputs if S3 provider is selected
+  // Validate provider-specific inputs
   validateS3Inputs(storageProvider, s3);
+  validateGCSInputs(storageProvider, gcs);
 
-  return { key, paths, storageProvider, cachePath, s3, compression, ttlDays, maxCacheSizeGb };
+  return { key, paths, storageProvider, cachePath, s3, gcs, compression, ttlDays, maxCacheSizeGb };
 }
 
 export function getRepoInfo(): { owner: string; repo: string } {
@@ -335,6 +381,20 @@ export function createRestoreStorageConfig(
         prefix: inputs.s3.prefix,
         forcePathStyle: inputs.s3.forcePathStyle,
       } as S3StorageOptions,
+    };
+  }
+
+  if (inputs.storageProvider === 'gcs') {
+    return {
+      type: 'gcs',
+      owner,
+      repo,
+      options: {
+        bucket: inputs.gcs.bucket,
+        projectId: inputs.gcs.projectId,
+        keyFilename: inputs.gcs.keyFile,
+        prefix: inputs.gcs.prefix,
+      } as GCSStorageOptions,
     };
   }
 
@@ -377,6 +437,21 @@ export function createSaveStorageConfig(
         prefix: inputs.s3.prefix,
         forcePathStyle: inputs.s3.forcePathStyle,
       } as S3StorageOptions,
+      ...baseConfig,
+    };
+  }
+
+  if (inputs.storageProvider === 'gcs') {
+    return {
+      type: 'gcs',
+      owner,
+      repo,
+      options: {
+        bucket: inputs.gcs.bucket,
+        projectId: inputs.gcs.projectId,
+        keyFilename: inputs.gcs.keyFile,
+        prefix: inputs.gcs.prefix,
+      } as GCSStorageOptions,
       ...baseConfig,
     };
   }
