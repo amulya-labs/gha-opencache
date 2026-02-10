@@ -61965,7 +61965,20 @@ function getInputs() {
     };
 }
 function getRestoreInputs() {
-    return getInputs();
+    const key = core.getInput(constants_1.Inputs.Key, { required: true });
+    const paths = core.getInput(constants_1.Inputs.Path, { required: true }).split('\n').filter(Boolean);
+    const restoreKeys = core.getInput(constants_1.Inputs.RestoreKeys).split('\n').filter(Boolean);
+    const failOnCacheMiss = core.getBooleanInput(constants_1.Inputs.FailOnCacheMiss);
+    const lookupOnly = core.getBooleanInput(constants_1.Inputs.LookupOnly);
+    const cachePath = core.getInput(constants_1.Inputs.CachePath) || constants_1.DEFAULT_CACHE_PATH;
+    return {
+        key,
+        paths,
+        restoreKeys,
+        failOnCacheMiss,
+        lookupOnly,
+        cachePath,
+    };
 }
 function getSaveInputs() {
     const key = core.getInput(constants_1.Inputs.Key, { required: true });

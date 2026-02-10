@@ -35,7 +35,21 @@ export function getRestoreInputs(): Pick<
   ActionInputs,
   'key' | 'paths' | 'restoreKeys' | 'failOnCacheMiss' | 'lookupOnly' | 'cachePath'
 > {
-  return getInputs();
+  const key = core.getInput(Inputs.Key, { required: true });
+  const paths = core.getInput(Inputs.Path, { required: true }).split('\n').filter(Boolean);
+  const restoreKeys = core.getInput(Inputs.RestoreKeys).split('\n').filter(Boolean);
+  const failOnCacheMiss = core.getBooleanInput(Inputs.FailOnCacheMiss);
+  const lookupOnly = core.getBooleanInput(Inputs.LookupOnly);
+  const cachePath = core.getInput(Inputs.CachePath) || DEFAULT_CACHE_PATH;
+
+  return {
+    key,
+    paths,
+    restoreKeys,
+    failOnCacheMiss,
+    lookupOnly,
+    cachePath,
+  };
 }
 
 export function getSaveInputs(): Pick<ActionInputs, 'key' | 'paths' | 'cachePath'> {
