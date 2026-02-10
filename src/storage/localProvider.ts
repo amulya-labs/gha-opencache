@@ -179,32 +179,27 @@ export class LocalStorageProvider implements StorageProvider {
 
   /**
    * Evict entries using LRU until total size is under targetBytes
+   * Evicts least-recently-used entries first until under the target size.
    */
   private async evictToSize(index: CacheIndex, targetBytes: number): Promise<CacheIndex> {
     // Filter out expired entries first
     const validEntries = filterValidEntries(index.entries);
-    const currentSize = validEntries.reduce((sum, e) => sum + e.sizeBytes, 0);
+    let currentSize = validEntries.reduce((sum, e) => sum + e.sizeBytes, 0);
 
     if (currentSize <= targetBytes) {
       return { ...index, entries: validEntries };
     }
 
-    // Sort by LRU - oldest accessed first
+    // Sort by LRU - oldest accessed first (least recently used at start)
     const sortedByLRU = getEntriesByLRU({ ...index, entries: validEntries });
-    const remainingEntries: CacheEntry[] = [];
+    const remainingEntries: CacheEntry[] = [...sortedByLRU];
     const evictedEntries: CacheEntry[] = [];
 
-    // Keep entries from the end (most recently used) until we exceed target
-    // Build the list in reverse - we want to keep the most recently used
-    let keptSize = 0;
-    for (let i = sortedByLRU.length - 1; i >= 0; i--) {
-      const entry = sortedByLRU[i];
-      if (keptSize + entry.sizeBytes <= targetBytes) {
-        remainingEntries.unshift(entry);
-        keptSize += entry.sizeBytes;
-      } else {
-        evictedEntries.push(entry);
-      }
+    // Evict from the front (least recently used) until we're under target
+    while (currentSize > targetBytes && remainingEntries.length > 0) {
+      const entry = remainingEntries.shift()!;
+      evictedEntries.push(entry);
+      currentSize -= entry.sizeBytes;
     }
 
     // Delete evicted archives

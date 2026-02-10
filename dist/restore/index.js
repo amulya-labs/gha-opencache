@@ -62031,30 +62031,24 @@ class LocalStorageProvider {
     }
     /**
      * Evict entries using LRU until total size is under targetBytes
+     * Evicts least-recently-used entries first until under the target size.
      */
     async evictToSize(index, targetBytes) {
         // Filter out expired entries first
         const validEntries = (0, indexManager_1.filterValidEntries)(index.entries);
-        const currentSize = validEntries.reduce((sum, e) => sum + e.sizeBytes, 0);
+        let currentSize = validEntries.reduce((sum, e) => sum + e.sizeBytes, 0);
         if (currentSize <= targetBytes) {
             return { ...index, entries: validEntries };
         }
-        // Sort by LRU - oldest accessed first
+        // Sort by LRU - oldest accessed first (least recently used at start)
         const sortedByLRU = (0, indexManager_1.getEntriesByLRU)({ ...index, entries: validEntries });
-        const remainingEntries = [];
+        const remainingEntries = [...sortedByLRU];
         const evictedEntries = [];
-        // Keep entries from the end (most recently used) until we exceed target
-        // Build the list in reverse - we want to keep the most recently used
-        let keptSize = 0;
-        for (let i = sortedByLRU.length - 1; i >= 0; i--) {
-            const entry = sortedByLRU[i];
-            if (keptSize + entry.sizeBytes <= targetBytes) {
-                remainingEntries.unshift(entry);
-                keptSize += entry.sizeBytes;
-            }
-            else {
-                evictedEntries.push(entry);
-            }
+        // Evict from the front (least recently used) until we're under target
+        while (currentSize > targetBytes && remainingEntries.length > 0) {
+            const entry = remainingEntries.shift();
+            evictedEntries.push(entry);
+            currentSize -= entry.sizeBytes;
         }
         // Delete evicted archives
         for (const entry of evictedEntries) {
@@ -62224,6 +62218,22 @@ exports.getRepoInfo = getRepoInfo;
 exports.isExactKeyMatch = isExactKeyMatch;
 const core = __importStar(__nccwpck_require__(7484));
 const constants_1 = __nccwpck_require__(7242);
+// Regex for strict integer validation (optional leading minus, digits only)
+const STRICT_INTEGER_REGEX = /^-?\d+$/;
+// Regex for strict float validation (optional leading minus, digits with optional decimal)
+const STRICT_FLOAT_REGEX = /^-?\d+(\.\d+)?$/;
+/**
+ * Validate that a string is a strict integer (no trailing characters)
+ */
+function isStrictInteger(value) {
+    return STRICT_INTEGER_REGEX.test(value.trim());
+}
+/**
+ * Validate that a string is a strict number (no trailing characters)
+ */
+function isStrictNumber(value) {
+    return STRICT_FLOAT_REGEX.test(value.trim());
+}
 /**
  * Parse compression method from input string
  */
@@ -62243,12 +62253,12 @@ function parseCompressionLevel(value) {
     if (!value || value.trim() === '') {
         return undefined;
     }
-    const level = parseInt(value, 10);
-    if (isNaN(level)) {
-        core.warning(`Invalid compression level '${value}'. Using default.`);
+    const trimmed = value.trim();
+    if (!isStrictInteger(trimmed)) {
+        core.warning(`Invalid compression level '${value}'. Must be a valid integer. Using default.`);
         return undefined;
     }
-    return level;
+    return parseInt(trimmed, 10);
 }
 /**
  * Parse compression options from inputs
@@ -62266,8 +62276,13 @@ function parseTtlDays() {
     if (!value || value.trim() === '') {
         return constants_1.DEFAULT_TTL_DAYS;
     }
-    const days = parseInt(value, 10);
-    if (isNaN(days) || days < 0) {
+    const trimmed = value.trim();
+    if (!isStrictInteger(trimmed)) {
+        core.warning(`Invalid ttl-days '${value}'. Must be a valid integer >= 0. Using default of ${constants_1.DEFAULT_TTL_DAYS}.`);
+        return constants_1.DEFAULT_TTL_DAYS;
+    }
+    const days = parseInt(trimmed, 10);
+    if (days < 0) {
         core.warning(`Invalid ttl-days '${value}'. Must be >= 0. Using default of ${constants_1.DEFAULT_TTL_DAYS}.`);
         return constants_1.DEFAULT_TTL_DAYS;
     }
@@ -62281,8 +62296,13 @@ function parseMaxCacheSizeGb() {
     if (!value || value.trim() === '') {
         return constants_1.DEFAULT_MAX_CACHE_SIZE_GB;
     }
-    const size = parseFloat(value);
-    if (isNaN(size) || size < 0) {
+    const trimmed = value.trim();
+    if (!isStrictNumber(trimmed)) {
+        core.warning(`Invalid max-cache-size-gb '${value}'. Must be a valid number >= 0. Using default of ${constants_1.DEFAULT_MAX_CACHE_SIZE_GB}.`);
+        return constants_1.DEFAULT_MAX_CACHE_SIZE_GB;
+    }
+    const size = parseFloat(trimmed);
+    if (size < 0) {
         core.warning(`Invalid max-cache-size-gb '${value}'. Must be >= 0. Using default of ${constants_1.DEFAULT_MAX_CACHE_SIZE_GB}.`);
         return constants_1.DEFAULT_MAX_CACHE_SIZE_GB;
     }

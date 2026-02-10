@@ -31,6 +31,26 @@ export type SaveInputs = Pick<
   'key' | 'paths' | 'cachePath' | 'compression' | 'ttlDays' | 'maxCacheSizeGb'
 >;
 
+// Regex for strict integer validation (optional leading minus, digits only)
+const STRICT_INTEGER_REGEX = /^-?\d+$/;
+
+// Regex for strict float validation (optional leading minus, digits with optional decimal)
+const STRICT_FLOAT_REGEX = /^-?\d+(\.\d+)?$/;
+
+/**
+ * Validate that a string is a strict integer (no trailing characters)
+ */
+function isStrictInteger(value: string): boolean {
+  return STRICT_INTEGER_REGEX.test(value.trim());
+}
+
+/**
+ * Validate that a string is a strict number (no trailing characters)
+ */
+function isStrictNumber(value: string): boolean {
+  return STRICT_FLOAT_REGEX.test(value.trim());
+}
+
 /**
  * Parse compression method from input string
  */
@@ -56,13 +76,13 @@ function parseCompressionLevel(value: string): number | undefined {
     return undefined;
   }
 
-  const level = parseInt(value, 10);
-  if (isNaN(level)) {
-    core.warning(`Invalid compression level '${value}'. Using default.`);
+  const trimmed = value.trim();
+  if (!isStrictInteger(trimmed)) {
+    core.warning(`Invalid compression level '${value}'. Must be a valid integer. Using default.`);
     return undefined;
   }
 
-  return level;
+  return parseInt(trimmed, 10);
 }
 
 /**
@@ -84,8 +104,16 @@ function parseTtlDays(): number {
     return DEFAULT_TTL_DAYS;
   }
 
-  const days = parseInt(value, 10);
-  if (isNaN(days) || days < 0) {
+  const trimmed = value.trim();
+  if (!isStrictInteger(trimmed)) {
+    core.warning(
+      `Invalid ttl-days '${value}'. Must be a valid integer >= 0. Using default of ${DEFAULT_TTL_DAYS}.`
+    );
+    return DEFAULT_TTL_DAYS;
+  }
+
+  const days = parseInt(trimmed, 10);
+  if (days < 0) {
     core.warning(
       `Invalid ttl-days '${value}'. Must be >= 0. Using default of ${DEFAULT_TTL_DAYS}.`
     );
@@ -104,8 +132,16 @@ function parseMaxCacheSizeGb(): number {
     return DEFAULT_MAX_CACHE_SIZE_GB;
   }
 
-  const size = parseFloat(value);
-  if (isNaN(size) || size < 0) {
+  const trimmed = value.trim();
+  if (!isStrictNumber(trimmed)) {
+    core.warning(
+      `Invalid max-cache-size-gb '${value}'. Must be a valid number >= 0. Using default of ${DEFAULT_MAX_CACHE_SIZE_GB}.`
+    );
+    return DEFAULT_MAX_CACHE_SIZE_GB;
+  }
+
+  const size = parseFloat(trimmed);
+  if (size < 0) {
     core.warning(
       `Invalid max-cache-size-gb '${value}'. Must be >= 0. Using default of ${DEFAULT_MAX_CACHE_SIZE_GB}.`
     );
