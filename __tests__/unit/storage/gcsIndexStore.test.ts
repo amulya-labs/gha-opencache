@@ -7,7 +7,9 @@ jest.mock('@google-cloud/storage');
 
 describe('GCSIndexStore', () => {
   let store: GCSIndexStore;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockFile: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockBucket: any;
 
   beforeEach(() => {

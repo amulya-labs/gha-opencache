@@ -1,6 +1,7 @@
 import { GCSStorageBackend } from '../../../src/storage/gcs/gcsBackend';
 import { Storage } from '@google-cloud/storage';
 import { Readable } from 'stream';
+import * as fs from 'fs';
 
 // Mock GCS SDK
 jest.mock('@google-cloud/storage');
@@ -13,7 +14,9 @@ jest.mock('fs', () => ({
 
 describe('GCSStorageBackend', () => {
   let backend: GCSStorageBackend;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockBucket: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockFile: any;
 
   beforeEach(() => {
@@ -138,8 +141,8 @@ describe('GCSStorageBackend', () => {
 
   describe('putFromPath', () => {
     it('uploads file from path', async () => {
-      const fs = require('fs');
-      fs.readFileSync.mockReturnValue(Buffer.from('file content'));
+      const mockReadFileSync = fs.readFileSync as jest.Mock;
+      mockReadFileSync.mockReturnValue(Buffer.from('file content'));
 
       const location = await backend.putFromPath('/tmp/sha256-abc123.tar.zst');
 
@@ -148,9 +151,9 @@ describe('GCSStorageBackend', () => {
     });
 
     it('uses resumable upload for large files', async () => {
-      const fs = require('fs');
       const largeData = Buffer.alloc(6 * 1024 * 1024); // 6MB
-      fs.readFileSync.mockReturnValue(largeData);
+      const mockReadFileSync = fs.readFileSync as jest.Mock;
+      mockReadFileSync.mockReturnValue(largeData);
 
       await backend.putFromPath('/tmp/sha256-abc123.tar.zst');
 

@@ -6,7 +6,9 @@ jest.mock('@google-cloud/storage');
 
 describe('GCSLockManager', () => {
   let lockManager: GCSLockManager;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockFile: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockBucket: any;
 
   beforeEach(() => {
