@@ -245,10 +245,11 @@ describe('LocalStorageProvider integration', () => {
 
   describe('LRU eviction', () => {
     it('evicts oldest entries when max size exceeded', async () => {
-      // Create a provider with very small max size (100 bytes)
+      // Create a provider with small max size (150 bytes)
       // Archives are compressed so even small files have some overhead
+      // Setting limit to 150 bytes ensures individual entries fit but two exceed the limit
       const providerWithLimit = new LocalStorageProvider(cacheDir, 'test-owner', 'lru-repo', {
-        maxCacheSizeGb: 100 / (1024 * 1024 * 1024), // 100 bytes limit
+        maxCacheSizeGb: 150 / (1024 * 1024 * 1024), // 150 bytes limit
       });
 
       // Create and save first file
@@ -260,14 +261,14 @@ describe('LocalStorageProvider integration', () => {
       const entry1 = index.entries.find(e => e.key === 'lru-key-1');
       expect(entry1).toBeDefined();
 
-      // The compressed archive is typically ~90-120 bytes
-      // Save second file - should trigger eviction of first since total would exceed 100 bytes
+      // The compressed archive is typically ~90-120 bytes depending on environment
+      // Save second file - should trigger eviction of first since total would exceed 150 bytes
       fs.writeFileSync(path.join(workDir, 'test2.txt'), 'b'.repeat(50));
       await providerWithLimit.save('lru-key-2', ['test2.txt']);
 
       // Check that oldest was evicted (because total would exceed limit)
       index = await providerWithLimit.getIndex();
-      // With 100 byte limit and ~90+ byte entries, only one should fit
+      // With 150 byte limit and ~90-120 byte entries, only one should fit
       expect(index.entries.length).toBe(1);
       expect(index.entries.find(e => e.key === 'lru-key-2')).toBeDefined();
     });
