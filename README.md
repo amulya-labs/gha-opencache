@@ -53,6 +53,23 @@
 > [MIGRATION.md](MIGRATION.md) - Setup instructions for all storage backends
 > [examples/](examples/) - Complete workflow examples
 
+## vs [actions/cache](https://github.com/actions/cache)
+
+| Feature | actions/cache | gha-opencache |
+|---------|:-------------:|:-------------:|
+| GitHub-hosted runners | ✅ | ❌ |
+| Self-hosted runners | ⚠️ Limited | ✅ |
+| Local filesystem storage | ❌ | ✅ |
+| S3-compatible storage | ❌ | ✅ |
+| Google Cloud Storage | ❌ | ✅ |
+| MinIO / R2 / Spaces | ❌ | ✅ |
+| API compatibility | - | ✅ 100% |
+| Configurable TTL | ❌ | ✅ |
+| Cache size limits | ❌ | ✅ |
+| Compression options | zstd | zstd, gzip, none |
+
+**Use `actions/cache`** for GitHub-hosted runners | **Use `gha-opencache`** for self-hosted runners
+
 ## Features
 
 **Storage:** Local filesystem, S3-compatible (AWS, MinIO, R2, Spaces), Google Cloud Storage
@@ -185,19 +202,6 @@ restore-keys: python-
 Designed for reliability with self-healing cache indexes and lock-free archive creation.
 
 > [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical deep dive
-
-## vs actions/cache
-
-| Feature | actions/cache | gha-opencache |
-|---------|---------------|-------------------|
-| GitHub-hosted cache | Yes | No |
-| Local / S3 / GCS storage | No | Yes |
-| API compatibility | - | 100% |
-| Compression options | zstd only | zstd, gzip, none |
-| Configurable TTL/limits | No | Yes |
-
-**Use `actions/cache`:** GitHub-hosted runners
-**Use `gha-opencache`:** Self-hosted runners with custom storage
 
 ## Examples
 
