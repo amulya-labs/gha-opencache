@@ -96,7 +96,7 @@ Built for **self-hosted runners** with flexible storage options:
 | `save-always` | Save cache even if job fails | `false` |
 | `compression` | Compression method: `auto`, `zstd`, `gzip`, `none` | `auto` |
 | `compression-level` | Compression level (1-19 for zstd, 1-9 for gzip) | 3 (zstd), 6 (gzip) |
-| `ttl-days` | Days until cache expires (0 = never) | `30` |
+| `ttl-days` | Days until cache expires (0 = never) | `7` |
 | `max-cache-size-gb` | Max cache size per repo in GB (0 = unlimited) | `10` |
 
 </details>
@@ -206,7 +206,7 @@ restore-keys: python-
 
 ## Cache Management
 
-**TTL expiration:** Auto-delete after `ttl-days` (default: 30, 0=disable)
+**TTL expiration:** Auto-delete after `ttl-days` (default: 7 days, matching GitHub Actions cache, 0=disable)
 **LRU eviction:** Remove oldest when exceeds `max-cache-size-gb` (default: 10 GB/repo, 0=disable)
 **Repository isolation:** Separate namespace per repo, no key collisions
 
@@ -289,7 +289,7 @@ For MinIO: `s3-force-path-style: true` required
 
 ```yaml
 max-cache-size-gb: 5   # Reduce from default 10 GB
-ttl-days: 7             # Reduce from default 30 days
+ttl-days: 3             # Even shorter than default 7 days
 compression-level: 9    # Increase compression
 ```
 

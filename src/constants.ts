@@ -57,7 +57,7 @@ export const DEFAULT_ZSTD_LEVEL = 3;
 export const DEFAULT_GZIP_LEVEL = 6;
 
 // TTL and size defaults
-export const DEFAULT_TTL_DAYS = 30;
+export const DEFAULT_TTL_DAYS = 7; // Matches GitHub Actions cache default
 export const DEFAULT_MAX_CACHE_SIZE_GB = 10;
 export const BYTES_PER_GB = 1024 * 1024 * 1024;
 

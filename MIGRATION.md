@@ -56,8 +56,8 @@ New-Item -Path "C:\gha-cache\v1" -ItemType Directory -Force
 # Monitor disk usage (cron)
 0 */6 * * * df -h /srv/gha-cache | mail -s "Cache" admin@example.com
 
-# Manual cleanup (>30 days)
-find /srv/gha-cache/v1 -type f -mtime +30 -delete
+# Manual cleanup (>7 days, matching default TTL)
+find /srv/gha-cache/v1 -type f -mtime +7 -delete
 ```
 
 </details>
