@@ -13,6 +13,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
+    "test:s3": "jest __tests__/integration/s3.test.ts --testTimeout=60000",
     "lint": "eslint src __tests__ --ext .ts",
     "lint:fix": "eslint src __tests__ --ext .ts --fix",
     "format": "prettier --write 'src/**/*.ts' '__tests__/**/*.ts'",
