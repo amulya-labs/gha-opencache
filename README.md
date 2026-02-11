@@ -53,7 +53,21 @@
 > [MIGRATION.md](MIGRATION.md) - Setup instructions for all storage backends
 > [examples/](examples/) - Complete workflow examples
 
-## vs [actions/cache](https://github.com/actions/cache)
+## Why `gha-opencache`?
+
+- ⚡ **Blazing fast** — Local storage uses disk I/O only, no network roundtrips
+- 🔌 **Drop-in replacement** — 100% API compatible with `actions/cache`
+- 🏠 **Local filesystem** — Cache directly on runner disk for maximum speed
+- ☁️ **S3-compatible** — AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces
+- 🌐 **Google Cloud Storage** — Native GCS with Workload Identity support
+- 🔄 **Smart restore-keys** — Prefix matching with newest-first selection
+- 🗜️ **Flexible compression** — zstd, gzip, or none (actions/cache: zstd only)
+- ⏰ **Configurable TTL** — Auto-expire old caches (actions/cache: no control)
+- 📊 **Size limits** — LRU eviction when cache exceeds limits
+- 🛡️ **Self-healing** — Automatic recovery from index corruption
+- 💻 **Cross-platform** — Linux, macOS, Windows
+
+### vs [actions/cache](https://github.com/actions/cache)
 
 | Feature | actions/cache | gha-opencache |
 |---------|:-------------:|:-------------:|
@@ -63,19 +77,12 @@
 | S3-compatible storage | ❌ | ✅ |
 | Google Cloud Storage | ❌ | ✅ |
 | MinIO / R2 / Spaces | ❌ | ✅ |
-| API compatibility | - | ✅ 100% |
+| API compatibility | — | ✅ 100% |
 | Configurable TTL | ❌ | ✅ |
 | Cache size limits | ❌ | ✅ |
 | Compression options | zstd | zstd, gzip, none |
 
 **Use `actions/cache`** for GitHub-hosted runners | **Use `gha-opencache`** for self-hosted runners
-
-## Features
-
-**Storage:** Local filesystem, S3-compatible (AWS, MinIO, R2, Spaces), Google Cloud Storage
-**Matching:** restore-keys prefix matching (newest-first), 100% `actions/cache` compatible
-**Management:** Configurable compression (zstd/gzip/none), TTL expiration, LRU eviction
-**Platform:** Linux, macOS, Windows
 
 ## Options
 
