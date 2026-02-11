@@ -91,15 +91,34 @@ export class FileIndexStore implements IndexStore {
   }
 
   async save(index: CacheIndex): Promise<void> {
+    let tempPath: string | undefined;
     try {
       await io.mkdirP(this.cacheDir);
       const content = JSON.stringify(index, null, 2);
-      fs.writeFileSync(this.indexPath, content, 'utf-8');
+
+      // Atomic write: write to temp file, then rename
+      // This prevents corruption if process crashes during write
+      tempPath = `${this.indexPath}.tmp.${Date.now()}.${process.pid}`;
+      fs.writeFileSync(tempPath, content, 'utf-8');
+
+      // Atomic rename (POSIX guarantees atomicity of rename)
+      fs.renameSync(tempPath, this.indexPath);
+      tempPath = undefined; // Successfully renamed, no cleanup needed
+
       core.debug(
         `Successfully saved cache index to ${this.indexPath} with ${index.entries.length} entries`
       );
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
+
+      // Clean up temp file if it exists
+      if (tempPath && fs.existsSync(tempPath)) {
+        try {
+          fs.unlinkSync(tempPath);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
 
       // Classify error types for better diagnostics
       if (error.code === 'EACCES' || error.code === 'EPERM') {
