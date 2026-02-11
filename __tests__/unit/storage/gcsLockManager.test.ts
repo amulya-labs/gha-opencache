@@ -136,22 +136,37 @@ describe('GCSLockManager', () => {
     it('handles Precondition Failed error message', async () => {
       const saveOptions: unknown[] = [];
       let saveAttempts = 0;
+      let capturedLockId: string | null = null;
+      let downloadAttempts = 0;
 
-      mockFile.save.mockImplementation((_content: string, opts: unknown) => {
+      mockFile.save.mockImplementation((content: string, opts: unknown) => {
         saveOptions.push(opts);
         saveAttempts++;
         if (saveAttempts === 1) {
           return Promise.reject(new Error('Precondition Failed'));
         }
+        // Capture the lockId written for stale takeover
+        const lockInfo = JSON.parse(content);
+        capturedLockId = lockInfo.lockId;
         return Promise.resolve();
       });
 
-      // Check if lock is stale - returns stale lock
+      // Check if lock is stale - returns stale lock first, then our lock on verification
       mockFile.exists.mockResolvedValue([true]);
-      const staleTimestamp = Date.now() - 35000; // 35 seconds ago (stale)
-      mockFile.download.mockResolvedValue([
-        Buffer.from(JSON.stringify({ lockId: 'stale-lock', timestamp: staleTimestamp })),
-      ]);
+      mockFile.download.mockImplementation(() => {
+        downloadAttempts++;
+        if (downloadAttempts === 1) {
+          // First download: stale lock
+          const staleTimestamp = Date.now() - 35000; // 35 seconds ago (stale)
+          return Promise.resolve([
+            Buffer.from(JSON.stringify({ lockId: 'stale-lock', timestamp: staleTimestamp })),
+          ]);
+        }
+        // Subsequent downloads: return the lock we just wrote (for verification and release)
+        return Promise.resolve([
+          Buffer.from(JSON.stringify({ lockId: capturedLockId, timestamp: Date.now() })),
+        ]);
+      });
       mockFile.delete.mockResolvedValue(undefined);
 
       const result = await lockManager.withLock(async () => 'success');
@@ -166,8 +181,10 @@ describe('GCSLockManager', () => {
 
     it('handles HTTP 412 code for precondition failed', async () => {
       let saveAttempts = 0;
+      let capturedLockId: string | null = null;
+      let downloadAttempts = 0;
 
-      mockFile.save.mockImplementation(() => {
+      mockFile.save.mockImplementation((content: string) => {
         saveAttempts++;
         if (saveAttempts === 1) {
           const error = new Error('Request failed');
@@ -175,15 +192,28 @@ describe('GCSLockManager', () => {
           (error as any).code = 412;
           return Promise.reject(error);
         }
+        // Capture the lockId written for stale takeover
+        const lockInfo = JSON.parse(content);
+        capturedLockId = lockInfo.lockId;
         return Promise.resolve();
       });
 
-      // Check if lock is stale - returns stale lock
+      // Check if lock is stale - returns stale lock first, then our lock on verification
       mockFile.exists.mockResolvedValue([true]);
-      const staleTimestamp = Date.now() - 35000; // 35 seconds ago (stale)
-      mockFile.download.mockResolvedValue([
-        Buffer.from(JSON.stringify({ lockId: 'stale-lock', timestamp: staleTimestamp })),
-      ]);
+      mockFile.download.mockImplementation(() => {
+        downloadAttempts++;
+        if (downloadAttempts === 1) {
+          // First download: stale lock
+          const staleTimestamp = Date.now() - 35000; // 35 seconds ago (stale)
+          return Promise.resolve([
+            Buffer.from(JSON.stringify({ lockId: 'stale-lock', timestamp: staleTimestamp })),
+          ]);
+        }
+        // Subsequent downloads: return the lock we just wrote (for verification and release)
+        return Promise.resolve([
+          Buffer.from(JSON.stringify({ lockId: capturedLockId, timestamp: Date.now() })),
+        ]);
+      });
       mockFile.delete.mockResolvedValue(undefined);
 
       const result = await lockManager.withLock(async () => 'success');
@@ -258,8 +288,8 @@ describe('GCSLockManager', () => {
     });
   });
 
-  describe('isConditionNotMet helper', () => {
-    it('handles non-precondition errors by retrying', async () => {
+  describe('retry behavior on non-precondition errors', () => {
+    it('retries when a generic (non-precondition) error occurs during save', async () => {
       let attempts = 0;
 
       mockFile.save.mockImplementation(() => {

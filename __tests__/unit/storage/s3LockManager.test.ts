@@ -167,6 +167,8 @@ describe('S3LockManager', () => {
 
       const commands: { name: string; input: unknown }[] = [];
       let putAttempts = 0;
+      let getAttempts = 0;
+      let capturedLockId: string | null = null;
       mockSend.mockImplementation(command => {
         const commandName = command.constructor.name;
         commands.push({ name: commandName, input: command.input });
@@ -181,12 +183,24 @@ describe('S3LockManager', () => {
             return Promise.reject(error);
           }
           // Second attempt (unconditional overwrite of stale lock) succeeds
+          // Capture the lockId written
+          const body = command.input.Body as string;
+          const lockInfo = JSON.parse(body);
+          capturedLockId = lockInfo.lockId;
           return Promise.resolve({});
         }
         if (commandName === 'GetObjectCommand') {
-          // Return stale lock
-          const staleTimestamp = Date.now() - 35000; // 35 seconds ago (stale)
-          const content = JSON.stringify({ lockId: 'stale-lock', timestamp: staleTimestamp });
+          getAttempts++;
+          if (getAttempts === 1) {
+            // First get: Return stale lock
+            const staleTimestamp = Date.now() - 35000; // 35 seconds ago (stale)
+            const content = JSON.stringify({ lockId: 'stale-lock', timestamp: staleTimestamp });
+            return Promise.resolve({
+              Body: Readable.from([Buffer.from(content)]),
+            });
+          }
+          // Subsequent gets: Return the lock we just wrote (for verification and release)
+          const content = JSON.stringify({ lockId: capturedLockId, timestamp: Date.now() });
           return Promise.resolve({
             Body: Readable.from([Buffer.from(content)]),
           });
@@ -299,8 +313,8 @@ describe('S3LockManager', () => {
     });
   });
 
-  describe('isPreconditionFailed helper', () => {
-    it('returns false for non-precondition errors', async () => {
+  describe('withLock retry behavior on non-precondition errors', () => {
+    it('retries lock acquisition after a non-precondition error and eventually succeeds', async () => {
       const lockManager = createS3LockManager(
         { bucket: 'test-bucket', region: 'us-east-1' },
         'owner',

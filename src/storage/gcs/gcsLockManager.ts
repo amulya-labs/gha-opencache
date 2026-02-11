@@ -97,9 +97,24 @@ export class GCSLockManager implements LockManager {
         // Lock exists - check if stale
         const existingLock = await this.getLock();
         if (existingLock && this.isLockStale(existingLock)) {
-          // Overwrite stale lock (unconditional - last writer wins for stale locks)
+          // Attempt to take over stale lock
           await this.writeLock(lockId, false);
-          return;
+
+          // Re-read lock to confirm we are the owner after takeover
+          const confirmedLock = await this.getLock();
+          if (
+            confirmedLock &&
+            !this.isLockStale(confirmedLock) &&
+            confirmedLock.lockId === lockId
+          ) {
+            return;
+          }
+
+          // If we are not the confirmed owner, fall through to retry logic
+          retries++;
+          await this.sleep(delay);
+          delay = Math.min(delay * 2, MAX_RETRY_DELAY_MS);
+          continue;
         }
 
         // Lock is held by another process, wait and retry

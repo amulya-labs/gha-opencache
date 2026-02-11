@@ -109,9 +109,21 @@ export class S3LockManager implements LockManager {
         // Lock exists - check if stale
         const existingLock = await this.getLock();
         if (existingLock && this.isLockStale(existingLock)) {
-          // Overwrite stale lock (unconditional - last writer wins for stale locks)
+          // Attempt to take over stale lock
           await this.writeLock(lockId, false);
-          return;
+
+          // Re-read lock to verify that we actually own it
+          const currentLock = await this.getLock();
+          if (currentLock && currentLock.lockId === lockId) {
+            // Our lockId is the one currently stored; we own the lock
+            return;
+          }
+
+          // Another contender won the race for the stale lock; back off and retry
+          retries++;
+          await this.sleep(delay);
+          delay = Math.min(delay * 2, MAX_RETRY_DELAY_MS);
+          continue;
         }
 
         // Lock is held by another process, wait and retry
