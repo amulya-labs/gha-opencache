@@ -1,8 +1,8 @@
 # actions-opencache
 
-[![CI](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/rrl-personal-projects/actions-opencache/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/rrl-personal-projects/actions-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/rrl-personal-projects/actions-opencache)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rrl-personal-projects/actions-opencache/badge)](https://securityscorecards.dev/viewer/?uri=github.com/rrl-personal-projects/actions-opencache)
+[![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amulya-labs/gha-opencache/badge)](https://securityscorecards.dev/viewer/?uri=github.com/amulya-labs/gha-opencache)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.
@@ -19,7 +19,7 @@ Built for **self-hosted runners** with flexible storage options:
 ## Quick Start
 
 ```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
+- uses: amulya-labs/gha-opencache@v1
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -32,7 +32,7 @@ Built for **self-hosted runners** with flexible storage options:
 
 **S3-compatible** (MinIO, R2, AWS S3, etc.):
 ```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
+- uses: amulya-labs/gha-opencache@v1
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -47,7 +47,7 @@ Built for **self-hosted runners** with flexible storage options:
 
 **Google Cloud Storage**:
 ```yaml
-- uses: rrl-personal-projects/actions-opencache@v1
+- uses: amulya-labs/gha-opencache@v1
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -326,6 +326,6 @@ Avoid caching platform-specific binaries.
 
 **[MIGRATION.md](MIGRATION.md)** - Setup guide for all storage backends
 **[examples/](examples/)** - Complete workflow examples
-**[Issues](https://github.com/rrl-personal-projects/actions-opencache/issues)** - Bug reports & features
+**[Issues](https://github.com/amulya-labs/gha-opencache/issues)** - Bug reports & features
 
 **License:** MIT - see [LICENSE](LICENSE)

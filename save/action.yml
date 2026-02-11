@@ -1,6 +1,6 @@
 name: 'Save Local Cache'
 description: 'Save cache to local filesystem storage'
-author: 'rrl-personal-projects'
+author: 'Amulya Labs'
 branding:
   icon: 'upload'
   color: 'blue'

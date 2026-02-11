@@ -18,7 +18,7 @@ We take the security of OpenCache seriously. If you discover a security vulnerab
 
 Instead, please report security vulnerabilities through one of the following methods:
 
-1. **GitHub Security Advisories (Preferred)**: Use GitHub's [private vulnerability reporting](https://github.com/rrl-personal-projects/actions-opencache/security/advisories/new) feature
+1. **GitHub Security Advisories (Preferred)**: Use GitHub's [private vulnerability reporting](https://github.com/amulya-labs/gha-opencache/security/advisories/new) feature
 2. **Email**: Contact the repository maintainers directly via GitHub
 
 ### What to Include

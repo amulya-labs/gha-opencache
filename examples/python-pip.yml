@@ -1,6 +1,6 @@
 name: Python with pip Cache
 # Example: Python pip package caching with multi-level restore-keys
-# Docs: https://github.com/rrl-personal-projects/actions-opencache#examples
+# Docs: https://github.com/amulya-labs/gha-opencache#examples
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
 
       - name: Cache pip packages
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: ~/.cache/pip
           key: pip-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}

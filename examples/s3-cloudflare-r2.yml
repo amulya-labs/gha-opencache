@@ -1,6 +1,6 @@
 name: S3 Cache with Cloudflare R2
 # Example: Using Cloudflare R2 S3-compatible storage
-# Docs: https://github.com/rrl-personal-projects/actions-opencache#storage-backends
+# Docs: https://github.com/amulya-labs/gha-opencache#storage-backends
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
           node-version: '20'
 
       - name: Cache with Cloudflare R2
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: |
             node_modules

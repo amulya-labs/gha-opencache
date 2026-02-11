@@ -178,8 +178,8 @@ Key interfaces:
 
 ## Getting Help
 
-- **Questions**: Start a [GitHub Discussion](https://github.com/rrl-personal-projects/actions-opencache/discussions)
-- **Bugs**: Open an [issue](https://github.com/rrl-personal-projects/actions-opencache/issues/new/choose)
+- **Questions**: Start a [GitHub Discussion](https://github.com/amulya-labs/gha-opencache/discussions)
+- **Bugs**: Open an [issue](https://github.com/amulya-labs/gha-opencache/issues/new/choose)
 - **Security**: See [SECURITY.md](SECURITY.md) for reporting vulnerabilities
 
 ## Development Resources

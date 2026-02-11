@@ -1,6 +1,6 @@
 name: Multiple Caches
 # Example: Using multiple independent caches in one workflow
-# Docs: https://github.com/rrl-personal-projects/actions-opencache#examples
+# Docs: https://github.com/amulya-labs/gha-opencache#examples
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
 
       # Cache 1: npm dependencies (changes infrequently)
       - name: Cache npm dependencies
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: node_modules
           key: deps-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -29,7 +29,7 @@ jobs:
 
       # Cache 2: Build artifacts (changes frequently)
       - name: Cache build output
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: dist
           key: build-${{ runner.os }}-${{ github.sha }}
@@ -39,7 +39,7 @@ jobs:
 
       # Cache 3: Test coverage (per branch)
       - name: Cache coverage
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: coverage
           key: coverage-${{ github.ref }}-${{ github.sha }}

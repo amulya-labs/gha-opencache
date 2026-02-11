@@ -98,7 +98,7 @@ body:
       description: Relevant workflow YAML configuration
       placeholder: |
         ```yaml
-        - uses: rrl-personal-projects/actions-opencache@v1
+        - uses: amulya-labs/gha-opencache@v1
           with:
             key: my-cache-key
             path: ./cache-dir

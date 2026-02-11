@@ -1,6 +1,6 @@
 name: Advanced restore-keys Patterns
 # Example: Advanced restore-keys patterns for different use cases
-# Docs: https://github.com/rrl-personal-projects/actions-opencache#restore-keys-behavior
+# Docs: https://github.com/amulya-labs/gha-opencache#restore-keys-behavior
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
 
       # Multi-level fallback: OS-specific → any OS
       - name: Cache with multi-level fallback
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -31,7 +31,7 @@ jobs:
 
       # Branch-aware: same branch → main → any
       - name: Cache with branch awareness
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: .next/cache
           key: nextjs-${{ github.ref }}-${{ hashFiles('package-lock.json') }}
@@ -42,7 +42,7 @@ jobs:
 
       # Version-specific: exact version → major version → any
       - name: Cache with version fallback
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: ~/.npm
           key: npm-global-${{ runner.os }}-node${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
@@ -53,7 +53,7 @@ jobs:
 
       # Time-based: weekly rotation with fallback
       - name: Cache with weekly rotation
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: ~/.cache/pip
           key: pip-${{ runner.os }}-week${{ github.run_number / 50 }}-${{ hashFiles('requirements.txt') }}

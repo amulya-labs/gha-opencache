@@ -1,6 +1,6 @@
 name: S3 Cache with MinIO
 # Example: Using MinIO S3-compatible storage backend
-# Docs: https://github.com/rrl-personal-projects/actions-opencache#storage-backends
+# Docs: https://github.com/amulya-labs/gha-opencache#storage-backends
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
           node-version: '20'
 
       - name: Cache with MinIO
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}

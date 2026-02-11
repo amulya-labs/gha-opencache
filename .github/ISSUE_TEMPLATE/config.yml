@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question or Discussion
-    url: https://github.com/rrl-personal-projects/actions-opencache/discussions/new?category=q-a
+    url: https://github.com/amulya-labs/gha-opencache/discussions/new?category=q-a
     about: Ask questions or start discussions about OpenCache
   - name: GitHub Discussions
-    url: https://github.com/rrl-personal-projects/actions-opencache/discussions
+    url: https://github.com/amulya-labs/gha-opencache/discussions
     about: Browse existing discussions or start a new one

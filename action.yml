@@ -1,6 +1,6 @@
-name: 'Local Cache'
-description: 'Cache artifacts using local filesystem storage - drop-in replacement for actions/cache'
-author: 'rrl-personal-projects'
+name: 'OpenCache'
+description: 'Cache artifacts using local filesystem, S3, or GCS storage - drop-in replacement for actions/cache'
+author: 'Amulya Labs'
 branding:
   icon: 'archive'
   color: 'blue'

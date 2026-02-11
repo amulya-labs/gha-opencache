@@ -1,6 +1,6 @@
 name: Node.js with Basic Cache
 # Example: Basic Node.js dependency caching with restore-keys fallback
-# Docs: https://github.com/rrl-personal-projects/actions-opencache#quick-start
+# Docs: https://github.com/amulya-labs/gha-opencache#quick-start
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
           node-version: '20'
 
       - name: Cache npm dependencies
-        uses: rrl-personal-projects/actions-opencache@v1
+        uses: amulya-labs/gha-opencache@v1
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}

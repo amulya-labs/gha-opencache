@@ -40,7 +40,7 @@ jobs:
           service_account: github-actions@my-project.iam.gserviceaccount.com
 
       # Cache node_modules using GCS with Workload Identity
-      - uses: rrl-personal-projects/actions-opencache@v1
+      - uses: amulya-labs/gha-opencache@v1
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}

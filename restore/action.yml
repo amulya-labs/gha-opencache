@@ -1,6 +1,6 @@
 name: 'Restore Local Cache'
 description: 'Restore cache from local filesystem storage'
-author: 'rrl-personal-projects'
+author: 'Amulya Labs'
 branding:
   icon: 'download'
   color: 'blue'
