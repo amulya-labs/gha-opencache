@@ -268,6 +268,7 @@ This prevents lock contention during concurrent saves.
 
 **Quick fixes:**
 - **Not restoring** → Check key format, verify `restore-keys` prefixes
+- **Docker containers** → Mount cache as volume: see [docs/DOCKER.md](docs/DOCKER.md)
 - **Permission denied** → `chown runner-user:runner-group /srv/gha-cache/v1`
 - **S3 auth fails** → Verify secrets, check IAM permissions
 - **Cache too large** → Reduce `max-cache-size-gb` or `ttl-days`
@@ -290,6 +291,46 @@ ls -la /srv/gha-cache/v1/owner/repo/
 ```
 
 Verify restore-keys have no trailing slashes or extra characters.
+
+### Docker Containers
+
+**Problem**: Cache saved in one job but not found in another job, both using identical keys.
+
+**Cause**: Jobs running in Docker containers have isolated filesystems. Each container has its own `/srv/gha-cache/v1`.
+
+**Solution**: Mount the cache directory from the host as a volume in **all** containers:
+
+```yaml
+jobs:
+  build:
+    container:
+      image: my-build-image
+      volumes:
+        - /srv/gha-cache:/srv/gha-cache  # ✅ Mount from host
+    steps:
+      - uses: amulya-labs/gha-opencache@v1
+        with:
+          path: target/
+          key: build-cache
+
+  test:
+    container:
+      image: my-test-image
+      volumes:
+        - /srv/gha-cache:/srv/gha-cache  # ✅ Same host directory
+    steps:
+      - uses: amulya-labs/gha-opencache@v1
+        with:
+          path: target/
+          key: build-cache  # ✅ Now cache is found!
+```
+
+**Verify mount**:
+```yaml
+- run: mount | grep gha-cache || echo "NOT MOUNTED!"
+```
+
+**See [docs/DOCKER.md](docs/DOCKER.md) for complete Docker setup guide** including Kubernetes, Docker Compose, and troubleshooting.
 
 ### Permission Denied
 
