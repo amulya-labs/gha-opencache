@@ -82,7 +82,7 @@ describe('S3LockManager', () => {
 
       // Track the commands sent
       const commands: { name: string; input: unknown }[] = [];
-      mockSend.mockImplementation((command) => {
+      mockSend.mockImplementation(command => {
         const commandName = command.constructor.name;
         commands.push({ name: commandName, input: command.input });
 
@@ -107,7 +107,7 @@ describe('S3LockManager', () => {
       expect(result).toBe('success');
 
       // Verify the first command was a PutObject with IfNoneMatch: '*' for atomic creation
-      const putCommands = commands.filter((c) => c.name === 'PutObjectCommand');
+      const putCommands = commands.filter(c => c.name === 'PutObjectCommand');
       expect(putCommands.length).toBeGreaterThanOrEqual(1);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((putCommands[0].input as any).IfNoneMatch).toBe('*');
@@ -121,7 +121,7 @@ describe('S3LockManager', () => {
       );
 
       let putAttempts = 0;
-      mockSend.mockImplementation((command) => {
+      mockSend.mockImplementation(command => {
         const commandName = command.constructor.name;
 
         if (commandName === 'PutObjectCommand') {
@@ -167,7 +167,7 @@ describe('S3LockManager', () => {
 
       const commands: { name: string; input: unknown }[] = [];
       let putAttempts = 0;
-      mockSend.mockImplementation((command) => {
+      mockSend.mockImplementation(command => {
         const commandName = command.constructor.name;
         commands.push({ name: commandName, input: command.input });
 
@@ -202,7 +202,7 @@ describe('S3LockManager', () => {
       expect(result).toBe('success');
 
       // Verify the stale lock overwrite was unconditional (no IfNoneMatch)
-      const putCommands = commands.filter((c) => c.name === 'PutObjectCommand');
+      const putCommands = commands.filter(c => c.name === 'PutObjectCommand');
       expect(putCommands.length).toBe(2);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((putCommands[1].input as any).IfNoneMatch).toBeUndefined();
@@ -215,7 +215,7 @@ describe('S3LockManager', () => {
         'repo'
       );
 
-      mockSend.mockImplementation((command) => {
+      mockSend.mockImplementation(command => {
         const commandName = command.constructor.name;
 
         if (commandName === 'PutObjectCommand') {
@@ -236,10 +236,12 @@ describe('S3LockManager', () => {
       // Start the promise and capture rejection
       let rejected = false;
       let errorMessage = '';
-      const resultPromise = lockManager.withLock(async () => 'success').catch((err) => {
-        rejected = true;
-        errorMessage = err.message;
-      });
+      const resultPromise = lockManager
+        .withLock(async () => 'success')
+        .catch(err => {
+          rejected = true;
+          errorMessage = err.message;
+        });
 
       // Advance through all retry delays (10 retries with exponential backoff up to 5 seconds each)
       // The total time would be: 100 + 200 + 400 + 800 + 1600 + 3200 + 5000 + 5000 + 5000 + 5000 = ~26.3s
@@ -264,7 +266,7 @@ describe('S3LockManager', () => {
       let deleteWasCalled = false;
       let capturedLockId: string | null = null;
 
-      mockSend.mockImplementation((command) => {
+      mockSend.mockImplementation(command => {
         const commandName = command.constructor.name;
 
         if (commandName === 'PutObjectCommand') {
@@ -306,7 +308,7 @@ describe('S3LockManager', () => {
       );
 
       let attempts = 0;
-      mockSend.mockImplementation((command) => {
+      mockSend.mockImplementation(command => {
         const commandName = command.constructor.name;
 
         if (commandName === 'PutObjectCommand') {

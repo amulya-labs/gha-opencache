@@ -87,7 +87,9 @@ describe('GCSLockManager', () => {
       });
       // For release
       mockFile.exists.mockResolvedValue([true]);
-      mockFile.download.mockResolvedValue([Buffer.from(JSON.stringify({ lockId: 'test', timestamp: Date.now() }))]);
+      mockFile.download.mockResolvedValue([
+        Buffer.from(JSON.stringify({ lockId: 'test', timestamp: Date.now() })),
+      ]);
       mockFile.delete.mockResolvedValue(undefined);
 
       const result = await lockManager.withLock(async () => 'success');
@@ -202,10 +204,12 @@ describe('GCSLockManager', () => {
       // Start the promise and capture rejection
       let rejected = false;
       let errorMessage = '';
-      const resultPromise = lockManager.withLock(async () => 'success').catch((err) => {
-        rejected = true;
-        errorMessage = err.message;
-      });
+      const resultPromise = lockManager
+        .withLock(async () => 'success')
+        .catch(err => {
+          rejected = true;
+          errorMessage = err.message;
+        });
 
       // Advance through all retry delays (10 retries with exponential backoff up to 5 seconds each)
       for (let i = 0; i < 30; i++) {
@@ -228,7 +232,9 @@ describe('GCSLockManager', () => {
       });
       mockFile.exists.mockResolvedValue([true]);
       mockFile.download.mockImplementation(() => {
-        return Promise.resolve([Buffer.from(JSON.stringify({ lockId: capturedLockId, timestamp: Date.now() }))]);
+        return Promise.resolve([
+          Buffer.from(JSON.stringify({ lockId: capturedLockId, timestamp: Date.now() })),
+        ]);
       });
       mockFile.delete.mockResolvedValue(undefined);
 
@@ -266,7 +272,9 @@ describe('GCSLockManager', () => {
 
       // For release
       mockFile.exists.mockResolvedValue([true]);
-      mockFile.download.mockResolvedValue([Buffer.from(JSON.stringify({ lockId: 'test', timestamp: Date.now() }))]);
+      mockFile.download.mockResolvedValue([
+        Buffer.from(JSON.stringify({ lockId: 'test', timestamp: Date.now() })),
+      ]);
       mockFile.delete.mockResolvedValue(undefined);
 
       const resultPromise = lockManager.withLock(async () => 'success');
