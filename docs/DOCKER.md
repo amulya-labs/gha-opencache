@@ -1,5 +1,7 @@
 # Using gha-opencache with Docker Containers
 
+→ **[Main Documentation](../README.md)** | **[Migration Guide](../MIGRATION.md)** | **[Examples](../examples/)**
+
 When running GitHub Actions jobs inside Docker containers, you **must** mount the cache directory as a volume from the host to ensure caches are shared across containers.
 
 ## The Problem
@@ -109,55 +111,6 @@ GitHub Actions runner working directory (`${{ runner.workspace }}`) is typically
 
 **Note**: This may be cleaned up between runs, so less ideal for persistent caching.
 
-## Docker Compose
-
-If using Docker Compose for your self-hosted runner:
-
-```yaml
-services:
-  github-runner:
-    image: myoung34/github-runner:latest
-    volumes:
-      # Mount cache directory from host
-      - /srv/gha-cache:/srv/gha-cache
-      # Also mount Docker socket for container jobs
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      RUNNER_NAME: my-runner
-      RUNNER_WORKDIR: /tmp/runner
-```
-
-## Kubernetes / Actions Runner Controller
-
-For Kubernetes-based runners using [actions-runner-controller](https://github.com/actions/actions-runner-controller):
-
-```yaml
-apiVersion: actions.summerwind.dev/v1alpha1
-kind: RunnerDeployment
-metadata:
-  name: my-runners
-spec:
-  template:
-    spec:
-      dockerdWithinRunnerContainer: true
-      volumes:
-        - name: cache-volume
-          hostPath:
-            path: /srv/gha-cache
-            type: DirectoryOrCreate
-      volumeMounts:
-        - name: cache-volume
-          mountPath: /srv/gha-cache
-      # Also need to mount to dind container
-      dockerVolumeMounts:
-        - name: cache-volume
-          mountPath: /srv/gha-cache
-```
-
-**Important**: With `dockerdWithinRunnerContainer: true`, you must add the volume to **both** the runner container and the dind (Docker-in-Docker) container using `dockerVolumeMounts`.
-
-See: [actions-runner-controller custom volumes docs](https://github.com/actions/actions-runner-controller/blob/master/docs/using-custom-volumes.md)
-
 ## Verification
 
 After configuring volumes, verify the setup:
@@ -234,22 +187,67 @@ container:
     cache-path: /srv/gha-cache/${{ runner.name }}
 ```
 
-## Comparison: corca-ai/local-cache
+---
 
-The [corca-ai/local-cache](https://github.com/corca-ai/local-cache) action has the same requirement - it uses `/home/ubuntu/.cache` by default, which must also be mounted from the host when using containers.
+## Advanced Setup
 
-Both actions require proper volume mounting for Docker container jobs.
+<details>
+<summary><strong>Docker Compose</strong></summary>
 
-## Best Practices
+If using Docker Compose for your self-hosted runner:
 
-1. **Always mount cache directory as volume** when using containers
-2. **Use absolute paths** for cache-path (e.g., `/srv/gha-cache`)
-3. **Mount the same path** in all containers that need to share caches
-4. **Set proper permissions** on the host directory (1000:1000 or 777)
-5. **Verify mounts** with debug steps before assuming cache is working
-6. **Use separate cache dirs** if running multiple runners on same host
+```yaml
+services:
+  github-runner:
+    image: myoung34/github-runner:latest
+    volumes:
+      # Mount cache directory from host
+      - /srv/gha-cache:/srv/gha-cache
+      # Also mount Docker socket for container jobs
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      RUNNER_NAME: my-runner
+      RUNNER_WORKDIR: /tmp/runner
+```
 
-## Example: Complete Rust Build with Docker
+</details>
+
+<details>
+<summary><strong>Kubernetes / Actions Runner Controller</strong></summary>
+
+For Kubernetes-based runners using [actions-runner-controller](https://github.com/actions/actions-runner-controller):
+
+```yaml
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: my-runners
+spec:
+  template:
+    spec:
+      dockerdWithinRunnerContainer: true
+      volumes:
+        - name: cache-volume
+          hostPath:
+            path: /srv/gha-cache
+            type: DirectoryOrCreate
+      volumeMounts:
+        - name: cache-volume
+          mountPath: /srv/gha-cache
+      # Also need to mount to dind container
+      dockerVolumeMounts:
+        - name: cache-volume
+          mountPath: /srv/gha-cache
+```
+
+**Important**: With `dockerdWithinRunnerContainer: true`, you must add the volume to **both** the runner container and the dind (Docker-in-Docker) container using `dockerVolumeMounts`.
+
+See: [actions-runner-controller custom volumes docs](https://github.com/actions/actions-runner-controller/blob/master/docs/using-custom-volumes.md)
+
+</details>
+
+<details>
+<summary><strong>Complete Rust Build Example</strong></summary>
 
 ```yaml
 name: Rust CI
@@ -308,6 +306,32 @@ jobs:
       - name: Test
         run: cargo test --release
 ```
+
+</details>
+
+<details>
+<summary><strong>Quick Checklist</strong></summary>
+
+Before deploying:
+- [ ] Cache directory mounted as volume in **all** container jobs
+- [ ] Using absolute paths (e.g., `/srv/gha-cache`)
+- [ ] Same path mounted in all containers
+- [ ] Permissions set correctly (1000:1000 or 777)
+- [ ] Verified mounts with debug commands
+- [ ] Separate cache dirs if multiple runners on same host
+
+</details>
+
+<details>
+<summary><strong>Comparison: corca-ai/local-cache</strong></summary>
+
+The [corca-ai/local-cache](https://github.com/corca-ai/local-cache) action has the same requirement - it uses `/home/ubuntu/.cache` by default, which must also be mounted from the host when using containers.
+
+Both actions require proper volume mounting for Docker container jobs.
+
+</details>
+
+---
 
 ## References
 

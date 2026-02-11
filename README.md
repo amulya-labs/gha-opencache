@@ -294,43 +294,19 @@ Verify restore-keys have no trailing slashes or extra characters.
 
 ### Docker Containers
 
-**Problem**: Cache saved in one job but not found in another job, both using identical keys.
+**Problem**: Cache saved in one job but not found in another.
 
-**Cause**: Jobs running in Docker containers have isolated filesystems. Each container has its own `/srv/gha-cache/v1`.
+**Cause**: Docker containers have isolated filesystems. Each container sees its own `/srv/gha-cache/v1` unless mounted from host.
 
-**Solution**: Mount the cache directory from the host as a volume in **all** containers:
-
+**Quick fix**:
 ```yaml
-jobs:
-  build:
-    container:
-      image: my-build-image
-      volumes:
-        - /srv/gha-cache:/srv/gha-cache  # ✅ Mount from host
-    steps:
-      - uses: amulya-labs/gha-opencache@v1
-        with:
-          path: target/
-          key: build-cache
-
-  test:
-    container:
-      image: my-test-image
-      volumes:
-        - /srv/gha-cache:/srv/gha-cache  # ✅ Same host directory
-    steps:
-      - uses: amulya-labs/gha-opencache@v1
-        with:
-          path: target/
-          key: build-cache  # ✅ Now cache is found!
+container:
+  image: my-image
+  volumes:
+    - /srv/gha-cache:/srv/gha-cache  # ✅ Mount from host
 ```
 
-**Verify mount**:
-```yaml
-- run: mount | grep gha-cache || echo "NOT MOUNTED!"
-```
-
-**See [docs/DOCKER.md](docs/DOCKER.md) for complete Docker setup guide** including Kubernetes, Docker Compose, and troubleshooting.
+→ **See [docs/DOCKER.md](docs/DOCKER.md)** for complete setup guide (container volumes, Kubernetes, Docker Compose, verification, troubleshooting).
 
 ### Permission Denied
 
