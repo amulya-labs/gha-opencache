@@ -322,15 +322,6 @@ Before deploying:
 
 </details>
 
-<details>
-<summary><strong>Comparison: corca-ai/local-cache</strong></summary>
-
-The [corca-ai/local-cache](https://github.com/corca-ai/local-cache) action has the same requirement - it uses `/home/ubuntu/.cache` by default, which must also be mounted from the host when using containers.
-
-Both actions require proper volume mounting for Docker container jobs.
-
-</details>
-
 ---
 
 ## References
