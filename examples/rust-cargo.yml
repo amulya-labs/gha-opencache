@@ -1,10 +1,17 @@
 name: Rust with Cargo Cache
 # Example: Caching Rust Cargo registry, index, and build artifacts
 #
-# This action is designed for SELF-HOSTED RUNNERS with local filesystem cache.
-# Cache is stored on the runner's disk at /srv/gha-cache/v1 (default).
+# Storage options:
+# 1. Local filesystem (shown below):
+#    - Requires: self-hosted runners with persistent disk
+#    - Fastest, no external dependencies
+#    - Cache stored at /srv/gha-cache/v1 (default)
 #
-# For GitHub-hosted runners, use actions/cache instead.
+# 2. S3/GCS backends (see s3-*.yml, gcs-*.yml):
+#    - Works on: GitHub-hosted OR self-hosted runners
+#    - Custom storage backend (actions/cache doesn't support this)
+#    - Shared cache across multiple runners
+#
 # Docs: https://github.com/amulya-labs/gha-opencache#examples
 
 on:

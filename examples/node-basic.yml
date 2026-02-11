@@ -1,10 +1,12 @@
 name: Node.js with Basic Cache
 # Example: Basic Node.js dependency caching with restore-keys fallback
 #
-# This action is designed for SELF-HOSTED RUNNERS with local filesystem cache.
-# Cache is stored on the runner's disk at /srv/gha-cache/v1 (default).
+# Local filesystem storage (storage-provider: local):
+# - Requires SELF-HOSTED RUNNERS with persistent disk
+# - Cache stored on runner's disk at /srv/gha-cache/v1 (default)
+# - Fast, no external dependencies
 #
-# For GitHub-hosted runners, use actions/cache instead.
+# For GitHub-hosted runners, use S3/GCS storage backends instead (see s3-*.yml, gcs-*.yml examples)
 # Docs: https://github.com/amulya-labs/gha-opencache#quick-start
 
 on:

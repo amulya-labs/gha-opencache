@@ -1,10 +1,16 @@
 name: Compression Tuning Examples
 # Example: Different compression strategies for various use cases
 #
-# This action is designed for SELF-HOSTED RUNNERS.
-# These examples show how to tune compression for different scenarios.
+# Storage options:
+# 1. Local filesystem (shown below):
+#    - Requires: self-hosted runners with persistent disk
+#    - Fastest, no external dependencies
 #
-# For GitHub-hosted runners, use actions/cache instead.
+# 2. S3/GCS backends (add storage-provider, s3-*/gcs-* inputs):
+#    - Works on: GitHub-hosted OR self-hosted runners
+#    - Custom storage backend (actions/cache doesn't support this)
+#
+# These examples show how to tune compression for different scenarios.
 # Docs: https://github.com/amulya-labs/gha-opencache#compression
 
 on:

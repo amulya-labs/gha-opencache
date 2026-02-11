@@ -1,11 +1,16 @@
 name: S3 Cache with MinIO
 # Example: Using MinIO S3-compatible storage backend
 #
-# This action is designed for SELF-HOSTED RUNNERS.
-# S3 storage is useful when:
-# - You need cache shared across multiple self-hosted runners
-# - You want persistent cache independent of runner disk storage
-# - You already have MinIO/S3 infrastructure
+# S3 storage works on BOTH GitHub-hosted and self-hosted runners.
+# Benefits over actions/cache:
+# - Custom storage backend (actions/cache only supports GitHub's cache service)
+# - Cache shared across multiple runners
+# - Full control over retention, storage location, and costs
+# - Works with self-hosted MinIO, AWS S3, Cloudflare R2, etc.
+#
+# Runner options:
+# 1. Self-hosted (shown below): Most common for MinIO (local infrastructure)
+# 2. GitHub-hosted: Change to "runs-on: ubuntu-latest" if MinIO is publicly accessible
 #
 # Docs: https://github.com/amulya-labs/gha-opencache#storage-backends
 
@@ -16,7 +21,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted  # Use your self-hosted runner with S3 access
+    runs-on: self-hosted  # or ubuntu-latest for GitHub-hosted runners
 
     steps:
       - uses: actions/checkout@v4
