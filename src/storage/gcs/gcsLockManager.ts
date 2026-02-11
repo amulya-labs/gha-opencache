@@ -80,6 +80,7 @@ export class GCSLockManager implements LockManager {
 
   /**
    * Acquire the lock with retries
+   * Uses atomic conditional writes to prevent race conditions
    */
   private async acquireLock(lockId: string): Promise<void> {
     let retries = 0;
@@ -87,34 +88,21 @@ export class GCSLockManager implements LockManager {
 
     while (retries < MAX_RETRIES) {
       try {
-        // Check if lock exists
-        const existingLock = await this.getLock();
-
-        if (existingLock) {
-          // Check if lock is stale
-          if (this.isLockStale(existingLock)) {
-            // Try to overwrite stale lock
-            await this.writeLock(lockId);
-            return;
-          }
-
-          // Lock is held by another process, wait and retry
-          retries++;
-          await this.sleep(delay);
-          delay = Math.min(delay * 2, MAX_RETRY_DELAY_MS);
-          continue;
+        // Try atomic lock creation first (only succeeds if lock doesn't exist)
+        const created = await this.writeLock(lockId, true);
+        if (created) {
+          return; // We got the lock atomically
         }
 
-        // No lock exists, try to create it
-        await this.writeLock(lockId);
-
-        // Verify we got the lock
-        const verifyLock = await this.getLock();
-        if (verifyLock && verifyLock.lockId === lockId) {
+        // Lock exists - check if stale
+        const existingLock = await this.getLock();
+        if (existingLock && this.isLockStale(existingLock)) {
+          // Overwrite stale lock (unconditional - last writer wins for stale locks)
+          await this.writeLock(lockId, false);
           return;
         }
 
-        // Someone else got it first, retry
+        // Lock is held by another process, wait and retry
         retries++;
         await this.sleep(delay);
         delay = Math.min(delay * 2, MAX_RETRY_DELAY_MS);
@@ -168,18 +156,30 @@ export class GCSLockManager implements LockManager {
 
   /**
    * Write lock info
+   * @param lockId The unique lock ID
+   * @param onlyIfNotExists If true, only create the lock if it doesn't already exist (atomic)
+   * @returns true if the lock was written, false if onlyIfNotExists was true and lock existed
    */
-  private async writeLock(lockId: string): Promise<void> {
+  private async writeLock(lockId: string, onlyIfNotExists: boolean = false): Promise<boolean> {
     const lockInfo: LockInfo = {
       lockId,
       timestamp: Date.now(),
     };
 
-    await this.lockFile.save(JSON.stringify(lockInfo), {
-      metadata: {
-        contentType: 'application/json',
-      },
-    });
+    try {
+      await this.lockFile.save(JSON.stringify(lockInfo), {
+        metadata: {
+          contentType: 'application/json',
+        },
+        ...(onlyIfNotExists && { preconditionOpts: { ifGenerationMatch: 0 } }),
+      });
+      return true;
+    } catch (err) {
+      if (onlyIfNotExists && isConditionNotMet(err)) {
+        return false; // Lock already exists
+      }
+      throw err;
+    }
   }
 
   /**
@@ -203,6 +203,22 @@ export class GCSLockManager implements LockManager {
 interface LockInfo {
   lockId: string;
   timestamp: number;
+}
+
+/**
+ * Check if an error is a GCS precondition failure (HTTP 412)
+ */
+function isConditionNotMet(err: unknown): boolean {
+  if (err instanceof Error) {
+    // GCS returns 412 Precondition Failed with various error messages
+    return (
+      err.message.includes('conditionNotMet') ||
+      err.message.includes('Precondition Failed') ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (err as any).code === 412
+    );
+  }
+  return false;
 }
 
 /**
