@@ -1,5 +1,11 @@
 # Example: Using Google Cloud Storage with service account key
 #
+# This action is designed for SELF-HOSTED RUNNERS.
+# GCS storage is useful when:
+# - You need cache shared across multiple self-hosted runners
+# - You want persistent cache independent of runner disk storage
+# - You already have GCP infrastructure
+#
 # Prerequisites:
 # 1. Create a GCS bucket: gsutil mb -p my-project gs://my-cache-bucket
 # 2. Create a service account with Storage Object Admin role
@@ -17,7 +23,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Use your self-hosted runner with GCS access
 
     steps:
       - uses: actions/checkout@v4

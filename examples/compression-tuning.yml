@@ -1,5 +1,10 @@
 name: Compression Tuning Examples
 # Example: Different compression strategies for various use cases
+#
+# This action is designed for SELF-HOSTED RUNNERS.
+# These examples show how to tune compression for different scenarios.
+#
+# For GitHub-hosted runners, use actions/cache instead.
 # Docs: https://github.com/amulya-labs/gha-opencache#compression
 
 on:
@@ -10,7 +15,7 @@ on:
 jobs:
   # Auto compression (default) - detects zstd, falls back to gzip
   auto-compression:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Use your self-hosted runner
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +31,7 @@ jobs:
 
   # Maximum compression - slower but smallest size
   max-compression:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +48,7 @@ jobs:
 
   # Fast compression - good for large caches
   fast-compression:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +67,7 @@ jobs:
 
   # No compression - fastest for small or pre-compressed data
   no-compression:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -78,7 +83,7 @@ jobs:
 
   # Gzip compression - maximum compatibility
   gzip-compression:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 

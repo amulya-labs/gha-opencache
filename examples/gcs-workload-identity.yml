@@ -1,5 +1,8 @@
 # Example: Using Google Cloud Storage with Workload Identity (keyless authentication)
 #
+# This action is designed for SELF-HOSTED RUNNERS.
+# Workload Identity provides keyless GCS authentication for self-hosted runners.
+#
 # Prerequisites:
 # 1. Create a GCS bucket: gsutil mb -p my-project gs://my-cache-bucket
 # 2. Set up Workload Identity Federation for GitHub Actions
@@ -22,7 +25,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Use your self-hosted runner with GCS access
 
     # Required for Workload Identity
     permissions:

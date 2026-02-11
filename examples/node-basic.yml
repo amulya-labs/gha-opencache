@@ -1,5 +1,10 @@
 name: Node.js with Basic Cache
 # Example: Basic Node.js dependency caching with restore-keys fallback
+#
+# This action is designed for SELF-HOSTED RUNNERS with local filesystem cache.
+# Cache is stored on the runner's disk at /srv/gha-cache/v1 (default).
+#
+# For GitHub-hosted runners, use actions/cache instead.
 # Docs: https://github.com/amulya-labs/gha-opencache#quick-start
 
 on:
@@ -9,7 +14,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Use your self-hosted runner (e.g., [self-hosted, linux])
 
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +30,8 @@ jobs:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: npm-${{ runner.os }}-
+          # storage-provider: local  # Default: uses local filesystem on self-hosted runner
+          # cache-path: /srv/gha-cache/v1  # Default: where cache is stored on runner disk
 
       - name: Install dependencies
         run: npm ci

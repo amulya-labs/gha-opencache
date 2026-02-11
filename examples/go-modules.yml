@@ -1,5 +1,10 @@
 name: Go with Module Cache
 # Example: Caching Go modules and build artifacts
+#
+# This action is designed for SELF-HOSTED RUNNERS with local filesystem cache.
+# Cache is stored on the runner's disk at /srv/gha-cache/v1 (default).
+#
+# For GitHub-hosted runners, use actions/cache instead.
 # Docs: https://github.com/amulya-labs/gha-opencache#examples
 
 on:
@@ -9,7 +14,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Use your self-hosted runner (e.g., [self-hosted, linux])
 
     steps:
       - uses: actions/checkout@v4
