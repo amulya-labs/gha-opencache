@@ -124,7 +124,7 @@ describe('storage interfaces', () => {
         // First restore permissions so we can read the directory
         fs.chmodSync(tempDir, 0o755);
         const files = fs.readdirSync(tempDir);
-        const tempFiles = files.filter((f) => f.includes('.tmp.'));
+        const tempFiles = files.filter(f => f.includes('.tmp.'));
         expect(tempFiles).toEqual([]);
       } finally {
         // Ensure permissions are restored for cleanup

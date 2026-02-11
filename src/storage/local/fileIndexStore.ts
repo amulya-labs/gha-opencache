@@ -91,7 +91,9 @@ export class FileIndexStore implements IndexStore {
           try {
             const preview = content.substring(0, 200);
             // Only log length and first few chars to avoid leaking cache keys/paths
-            core.debug(`Corrupted index length: ${content.length} bytes, preview: ${preview.substring(0, 50)}...`);
+            core.debug(
+              `Corrupted index length: ${content.length} bytes, preview: ${preview.substring(0, 50)}...`
+            );
           } catch {
             // Ignore preview errors
           }
