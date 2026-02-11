@@ -1,4 +1,4 @@
-# actions-opencache
+# gha-opencache
 
 [![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
@@ -215,7 +215,7 @@ max-cache-size-gb: 20    # larger limit for monorepos
 
 ## vs actions/cache
 
-| Feature | actions/cache | actions-opencache |
+| Feature | actions/cache | gha-opencache |
 |---------|---------------|-------------------|
 | GitHub-hosted cache | ✅ | ❌ |
 | Local / S3 / GCS storage | ❌ | ✅ |
@@ -224,7 +224,7 @@ max-cache-size-gb: 20    # larger limit for monorepos
 | Configurable TTL/limits | ❌ | ✅ |
 
 **Use `actions/cache`:** GitHub-hosted runners
-**Use `actions-opencache`:** Self-hosted runners with custom storage
+**Use `gha-opencache`:** Self-hosted runners with custom storage
 
 ## Examples
 

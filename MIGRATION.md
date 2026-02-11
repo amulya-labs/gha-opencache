@@ -11,7 +11,7 @@ All inputs, outputs, and behavior are identical.
 <details>
 <summary>Optional: Configure Additional Features</summary>
 
-`actions-opencache` adds optional features beyond `actions/cache`:
+`gha-opencache` adds optional features beyond `actions/cache`:
 
 ```yaml
 # Configurable compression

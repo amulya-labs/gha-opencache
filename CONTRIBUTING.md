@@ -19,8 +19,8 @@ This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDU
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/actions-opencache.git
-   cd actions-opencache
+   git clone https://github.com/YOUR_USERNAME/gha-opencache.git
+   cd gha-opencache
    ```
 
 3. Install dependencies:
