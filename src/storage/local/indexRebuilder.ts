@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as core from '@actions/core';
-import { CacheIndex } from '../../keyResolver/indexManager';
+import { CacheIndex, CacheEntry } from '../../keyResolver/indexManager';
 import { INDEX_VERSION, ARCHIVES_DIR } from '../../constants';
 import { readManifest, manifestToEntry } from './manifestStore';
 
@@ -79,7 +79,7 @@ export async function rebuildIndexFromManifests(cacheDir: string): Promise<Cache
     };
   }
 
-  const entries = [];
+  const entries: CacheEntry[] = [];
   let manifestCount = 0;
   let orphanedArchives = 0;
   let missingArchives = 0;

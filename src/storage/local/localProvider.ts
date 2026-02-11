@@ -9,7 +9,7 @@ import { createFileLockManager } from './fileLockManager';
 import { CacheEntry, findEntry, addEntry } from '../../keyResolver/indexManager';
 import { createArchive, extractArchive } from '../../archive/tar';
 import { CompressionOptions } from '../../archive/compression';
-import { entryToManifest, writeManifest } from './manifestStore';
+import { entryToManifest, writeManifest, deleteManifest } from './manifestStore';
 
 /**
  * Options for local storage provider
@@ -61,8 +61,8 @@ export class LocalStorageProvider extends BaseStorageProvider implements Storage
     const compressionOptions = this.options.compression as CompressionOptions | undefined;
     const result = await createArchive(paths, archivesDir, undefined, compressionOptions);
 
-    // Rename to .tmp suffix to mark as incomplete
-    const tempArchivePath = `${result.archivePath}.tmp`;
+    // Rename to .tmp suffix with unique identifier to prevent concurrent write collisions
+    const tempArchivePath = `${result.archivePath}.tmp.${Date.now()}.${process.pid}`;
     try {
       fs.renameSync(result.archivePath, tempArchivePath);
     } catch (err) {
@@ -103,13 +103,14 @@ export class LocalStorageProvider extends BaseStorageProvider implements Storage
       }
       index = cleanedIndex;
 
-      // Check if we need to evict entries before adding
-      index = await this.maybeEvict(index, result.sizeBytes);
+      // Check if we need to evict entries before adding (defers deletion)
+      const { index: evictedIndex, toDelete } = await this.maybeEvict(index, result.sizeBytes);
+      index = evictedIndex;
 
       // Atomic operations: finalize archive, write manifest, update index
       try {
-        // 1. Finalize archive: .tmp → final (atomic rename)
-        const finalArchivePath = tempArchivePath.replace('.tmp', '');
+        // 1. Finalize archive: .tmp.timestamp.pid → final (atomic rename)
+        const finalArchivePath = tempArchivePath.replace(/\.tmp\.\d+\.\d+$/, '');
         fs.renameSync(tempArchivePath, finalArchivePath);
 
         const entry: CacheEntry = {
@@ -129,15 +130,22 @@ export class LocalStorageProvider extends BaseStorageProvider implements Storage
         const updatedIndex = addEntry(index, entry);
         await this.indexStore.save(updatedIndex);
 
+        // 4. Delete evicted entries AFTER index save succeeds
+        if (toDelete.length > 0) {
+          await this.deleteEvictedEntries(toDelete);
+        }
+
         core.info(`Cache saved: ${key} (${formatBytes(entry.sizeBytes)})`);
 
         return entry;
       } catch (err) {
         // Rollback: clean up finalized archive and manifest if they exist
-        const finalArchivePath = tempArchivePath.replace('.tmp', '');
+        const finalArchivePath = tempArchivePath.replace(/\.tmp\.\d+\.\d+$/, '');
         try {
           if (fs.existsSync(finalArchivePath)) {
             fs.unlinkSync(finalArchivePath);
+            // Delete manifest file as well
+            await deleteManifest(finalArchivePath);
           }
           if (fs.existsSync(tempArchivePath)) {
             fs.unlinkSync(tempArchivePath);

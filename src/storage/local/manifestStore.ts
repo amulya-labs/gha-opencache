@@ -120,6 +120,14 @@ export async function readManifest(archivePath: string): Promise<ArchiveManifest
       return undefined;
     }
 
+    // Version validation
+    if (manifest.version !== MANIFEST_VERSION) {
+      core.warning(
+        `Incompatible manifest version: ${manifest.version} (expected: ${MANIFEST_VERSION}): ${manifestPath}`
+      );
+      return undefined;
+    }
+
     return manifest;
   } catch (err) {
     core.warning(`Failed to read manifest ${manifestPath}: ${err}`);

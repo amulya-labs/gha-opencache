@@ -222,7 +222,7 @@ The cache automatically recovers from index corruption:
 **Manifest Files**: Each archive has a `.meta.json` file with complete metadata
 **Automatic Rebuild**: Corrupted or missing index is reconstructed from manifests
 **Manual Rebuild**: Set `OPENCACHE_REBUILD_INDEX=1` to force rebuild
-**Temp Cleanup**: Interrupted saves are automatically cleaned up
+**Temp Cleanup**: Stale temp files (>1 hour old) cleaned during index rebuild
 
 ### Recovery Scenarios
 
