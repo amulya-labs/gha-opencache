@@ -15,7 +15,7 @@ export function shouldRebuildIndex(): boolean {
 }
 
 /**
- * Clean up stale temporary files (>.1 hour old)
+ * Clean up stale temporary files (>1 hour old)
  * Returns count of deleted files
  */
 export async function cleanupTempFiles(archivesDir: string): Promise<number> {
