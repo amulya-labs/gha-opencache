@@ -22,7 +22,7 @@ jobs:
 
       - name: Start MinIO
         run: |
-          docker run -d \
+          docker run -d --rm \
             --name minio \
             -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
@@ -32,14 +32,22 @@ jobs:
 
           # Wait for MinIO to be ready
           echo "Waiting for MinIO to start..."
+          minio_ready=0
           for i in {1..30}; do
             if curl -sf http://localhost:9000/minio/health/live; then
               echo "MinIO is ready"
+              minio_ready=1
               break
             fi
             echo "Attempt $i: MinIO not ready yet..."
             sleep 1
           done
+
+          if [ "$minio_ready" -ne 1 ]; then
+            echo "ERROR: MinIO failed to become ready after 30 attempts. Exiting workflow."
+            docker logs minio || true
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
@@ -53,6 +61,10 @@ jobs:
           MINIO_ENDPOINT: http://localhost:9000
           MINIO_ACCESS_KEY: minioadmin
           MINIO_SECRET_KEY: minioadmin
+
+      - name: Show MinIO logs on failure
+        if: failure()
+        run: docker logs minio || true
 
       - name: Stop MinIO
         if: always()

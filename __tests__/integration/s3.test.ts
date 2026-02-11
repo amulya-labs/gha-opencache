@@ -7,6 +7,7 @@ import {
   HeadBucketCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
+  ListObjectsV2Output,
 } from '@aws-sdk/client-s3';
 import { createS3StorageProvider } from '../../src/storage/s3/s3Provider';
 import { S3StorageOptions } from '../../src/storage/interfaces';
@@ -16,7 +17,7 @@ import { S3StorageOptions } from '../../src/storage/interfaces';
  *
  * These tests require MinIO to be running. They will skip gracefully if MinIO is unavailable.
  * To run locally:
- *   docker run -d -p 9000:9000 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin bitnami/minio:latest
+ *   docker run -d -p 9000:9000 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin quay.io/minio/minio:latest server /data
  *   npm run test:s3
  */
 
@@ -64,7 +65,7 @@ beforeAll(async () => {
     console.warn(
       '\n⚠️  MinIO not available - S3 integration tests will be skipped.\n' +
         '   To run these tests locally, start MinIO:\n' +
-        '   docker run -d -p 9000:9000 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin bitnami/minio:latest\n'
+        '   docker run -d -p 9000:9000 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin quay.io/minio/minio:latest server /data\n'
     );
   }
 });
@@ -97,19 +98,46 @@ describe('S3 Storage Provider Integration', () => {
     };
   });
 
+  async function listAllObjects(token?: string): Promise<ListObjectsV2Output> {
+    return s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: TEST_BUCKET,
+        ContinuationToken: token,
+      })
+    );
+  }
+
   async function cleanupBucket(): Promise<void> {
     try {
-      const listResult = await s3Client.send(new ListObjectsV2Command({ Bucket: TEST_BUCKET }));
+      let continuationToken: string | undefined = undefined;
+      let hasMore = true;
 
-      if (listResult.Contents && listResult.Contents.length > 0) {
-        await s3Client.send(
-          new DeleteObjectsCommand({
-            Bucket: TEST_BUCKET,
-            Delete: {
-              Objects: listResult.Contents.map(obj => ({ Key: obj.Key })),
-            },
-          })
-        );
+      while (hasMore) {
+        const listResult = await listAllObjects(continuationToken);
+        const contents = listResult.Contents || [];
+
+        if (contents.length > 0) {
+          // AWS S3 limits DeleteObjects to 1000 objects per request
+          const batchSize = 1000;
+          for (let i = 0; i < contents.length; i += batchSize) {
+            const batch = contents.slice(i, i + batchSize);
+            const objectsToDelete = batch
+              .filter(obj => obj.Key != null)
+              .map(obj => ({ Key: obj.Key! }));
+
+            if (objectsToDelete.length > 0) {
+              await s3Client.send(
+                new DeleteObjectsCommand({
+                  Bucket: TEST_BUCKET,
+                  Delete: { Objects: objectsToDelete },
+                })
+              );
+            }
+          }
+        }
+
+        hasMore = listResult.IsTruncated === true;
+        continuationToken = listResult.NextContinuationToken;
       }
     } catch {
       // Ignore cleanup errors
@@ -403,23 +431,26 @@ describe('S3 Storage Provider Integration', () => {
     });
 
     itIfMinio('evicts oldest entries when max size exceeded', async () => {
-      // Create a provider with small max size and no compression
-      // Without compression, tar archives are ~10KB each (tar block size)
+      // Use explicit file sizes so eviction logic doesn't depend on tar's internal block size.
+      // 8KB per file provides predictable archive sizes for testing eviction.
+      const FILE_SIZE_BYTES = 8 * 1024; // 8KB per file
+      const maxCacheSizeBytes = (FILE_SIZE_BYTES * 3) / 2; // >1 file, <2 files
+
       const provider = createS3StorageProvider(s3Options, 'test-owner', 'lru-repo', {
-        maxCacheSizeGb: 15000 / (1024 * 1024 * 1024), // ~15KB limit
+        maxCacheSizeGb: maxCacheSizeBytes / (1024 * 1024 * 1024),
         compression: { method: 'none' },
       });
 
-      // Create and save first file (~10KB uncompressed tar)
-      fs.writeFileSync(path.join(workDir, 'test1.txt'), 'a'.repeat(50));
+      // Create and save first file
+      fs.writeFileSync(path.join(workDir, 'test1.txt'), 'a'.repeat(FILE_SIZE_BYTES));
       await provider.save('lru-key-1', ['test1.txt']);
 
       // Verify first entry exists
       let index = await provider.getIndex();
       expect(index.entries.find(e => e.key === 'lru-key-1')).toBeDefined();
 
-      // Save second file - should trigger eviction since total would exceed ~15KB
-      fs.writeFileSync(path.join(workDir, 'test2.txt'), 'b'.repeat(50));
+      // Save second file - should trigger eviction since total exceeds maxCacheSizeBytes
+      fs.writeFileSync(path.join(workDir, 'test2.txt'), 'b'.repeat(FILE_SIZE_BYTES));
       await provider.save('lru-key-2', ['test2.txt']);
 
       // Check that oldest was evicted
@@ -451,9 +482,11 @@ describe('S3 Storage Provider Integration', () => {
 
       const provider = createS3StorageProvider(badOptions, 'test-owner', 'test-repo');
 
-      // Should throw when trying to save
+      // Should throw with specific S3 error when trying to save to nonexistent bucket
       fs.writeFileSync(path.join(workDir, 'test.txt'), 'test');
-      await expect(provider.save('test-key', ['test.txt'])).rejects.toThrow();
+      await expect(provider.save('test-key', ['test.txt'])).rejects.toThrow(
+        /NoSuchBucket|bucket.*not.*exist|not.*found/i
+      );
     });
   });
 
