@@ -134,7 +134,7 @@ export async function decompressArchive(
   method: CompressionMethod
 ): Promise<void> {
   if (method === 'zstd') {
-    await exec.exec('zstd', ['-d', '-o', outputPath, archivePath]);
+    await exec.exec('zstd', ['-d', '--long=30', '-o', outputPath, archivePath]);
   } else if (method === 'gzip') {
     // Use Node.js zlib for reliable cross-platform gzip decompression
     const gunzip = zlib.createGunzip();

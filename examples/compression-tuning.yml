@@ -11,6 +11,7 @@ name: Compression Tuning Examples
 #    - Custom storage backend (actions/cache doesn't support this)
 #
 # These examples show how to tune compression for different scenarios.
+# Note: zstd automatically handles large caches (>1GB) with --long=30 flag
 # Docs: https://github.com/amulya-labs/gha-opencache#compression
 
 on:
