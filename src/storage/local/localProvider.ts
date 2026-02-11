@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import * as core from '@actions/core';
 import { StorageProvider } from '../interfaces';
 import { BaseStorageProvider, BaseStorageOptions, formatBytes } from '../baseProvider';
@@ -8,6 +9,7 @@ import { createFileLockManager } from './fileLockManager';
 import { CacheEntry, findEntry, addEntry } from '../../keyResolver/indexManager';
 import { createArchive, extractArchive } from '../../archive/tar';
 import { CompressionOptions } from '../../archive/compression';
+import { entryToManifest, writeManifest } from './manifestStore';
 
 /**
  * Options for local storage provider
@@ -52,13 +54,45 @@ export class LocalStorageProvider extends BaseStorageProvider implements Storage
   }
 
   async save(key: string, paths: string[]): Promise<CacheEntry> {
+    // PHASE A: Slow I/O without lock (archive creation can take minutes)
+    const archivesDir = await this.localBackend.ensureArchivesDir();
+    core.info(`Creating cache archive for ${paths.length} path(s)`);
+
+    const compressionOptions = this.options.compression as CompressionOptions | undefined;
+    const result = await createArchive(paths, archivesDir, undefined, compressionOptions);
+
+    // Rename to .tmp suffix to mark as incomplete
+    const tempArchivePath = `${result.archivePath}.tmp`;
+    try {
+      fs.renameSync(result.archivePath, tempArchivePath);
+    } catch (err) {
+      // Clean up and propagate error
+      try {
+        fs.unlinkSync(result.archivePath);
+      } catch {
+        // Ignore cleanup errors
+      }
+      throw new Error(`Failed to rename archive to temporary path: ${err}`);
+    }
+
+    // Prepare entry metadata
+    const expiresAt = this.calculateExpiresAt();
+    const now = new Date().toISOString();
+
+    // PHASE B: Fast commit with lock (~10ms)
     return this.lockManager.withLock(async () => {
       let index = await this.indexStore.load();
 
-      // Check if entry already exists
+      // Check if entry already exists (idempotency)
       const existing = findEntry(index, key);
       if (existing) {
         core.info(`Cache entry already exists for key: ${key}`);
+        // Clean up temp archive
+        try {
+          fs.unlinkSync(tempArchivePath);
+        } catch {
+          // Ignore cleanup errors
+        }
         return existing;
       }
 
@@ -69,36 +103,52 @@ export class LocalStorageProvider extends BaseStorageProvider implements Storage
       }
       index = cleanedIndex;
 
-      // Create archive
-      const archivesDir = await this.localBackend.ensureArchivesDir();
-      core.info(`Creating cache archive for ${paths.length} path(s)`);
-
-      const compressionOptions = this.options.compression as CompressionOptions | undefined;
-      const result = await createArchive(paths, archivesDir, undefined, compressionOptions);
-
-      // Calculate expiration time
-      const expiresAt = this.calculateExpiresAt();
-      const now = new Date().toISOString();
-
-      const entry: CacheEntry = {
-        key,
-        archivePath: path.relative(this.cacheDir, result.archivePath),
-        createdAt: now,
-        sizeBytes: result.sizeBytes,
-        expiresAt,
-        accessedAt: now,
-      };
-
       // Check if we need to evict entries before adding
-      index = await this.maybeEvict(index, entry.sizeBytes);
+      index = await this.maybeEvict(index, result.sizeBytes);
 
-      // Update index
-      const updatedIndex = addEntry(index, entry);
-      await this.indexStore.save(updatedIndex);
+      // Atomic operations: finalize archive, write manifest, update index
+      try {
+        // 1. Finalize archive: .tmp → final (atomic rename)
+        const finalArchivePath = tempArchivePath.replace('.tmp', '');
+        fs.renameSync(tempArchivePath, finalArchivePath);
 
-      core.info(`Cache saved: ${key} (${formatBytes(entry.sizeBytes)})`);
+        const entry: CacheEntry = {
+          key,
+          archivePath: path.relative(this.cacheDir, finalArchivePath),
+          createdAt: now,
+          sizeBytes: result.sizeBytes,
+          expiresAt,
+          accessedAt: now,
+        };
 
-      return entry;
+        // 2. Write manifest
+        const manifest = entryToManifest(entry, result.compressionMethod);
+        await writeManifest(finalArchivePath, manifest);
+
+        // 3. Update index
+        const updatedIndex = addEntry(index, entry);
+        await this.indexStore.save(updatedIndex);
+
+        core.info(`Cache saved: ${key} (${formatBytes(entry.sizeBytes)})`);
+
+        return entry;
+      } catch (err) {
+        // Rollback: clean up finalized archive and manifest if they exist
+        const finalArchivePath = tempArchivePath.replace('.tmp', '');
+        try {
+          if (fs.existsSync(finalArchivePath)) {
+            fs.unlinkSync(finalArchivePath);
+          }
+          if (fs.existsSync(tempArchivePath)) {
+            fs.unlinkSync(tempArchivePath);
+          }
+        } catch {
+          // Ignore cleanup errors
+        }
+
+        // Rethrow original error
+        throw err;
+      }
     });
   }
 }

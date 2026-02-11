@@ -215,6 +215,32 @@ ttl-days: 7              # shorter TTL for frequently-changing deps
 max-cache-size-gb: 20    # larger limit for monorepos
 ```
 
+## Self-Healing Cache
+
+The cache automatically recovers from index corruption:
+
+**Manifest Files**: Each archive has a `.meta.json` file with complete metadata
+**Automatic Rebuild**: Corrupted or missing index is reconstructed from manifests
+**Manual Rebuild**: Set `OPENCACHE_REBUILD_INDEX=1` to force rebuild
+**Temp Cleanup**: Interrupted saves are automatically cleaned up
+
+### Recovery Scenarios
+
+| Scenario | Recovery |
+|----------|----------|
+| Corrupted `index.json` | Automatic rebuild from manifests |
+| Missing `index.json` | Rebuild if manifests exist, else empty |
+| Interrupted save | Temp files ignored, cleaned after 1 hour |
+| Partial manifest | Entry skipped, others recovered |
+
+### Lock-Free Archive Creation
+
+Archive creation happens without holding locks:
+- **Phase 1**: Create archive (unlocked, can take minutes)
+- **Phase 2**: Atomic commit (locked, ~10ms)
+
+This prevents lock contention during concurrent saves.
+
 ## vs actions/cache
 
 | Feature | actions/cache | gha-opencache |

@@ -109,6 +109,10 @@ export abstract class BaseStorageProvider implements StorageProvider {
         } catch (err) {
           core.debug(`Failed to delete archive ${entry.archivePath}: ${err}`);
         }
+
+        // Delete manifest for local provider
+        await this.deleteManifestIfLocal(entry.archivePath);
+
         deletedCount++;
       } else {
         validEntries.push(entry);
@@ -155,6 +159,9 @@ export abstract class BaseStorageProvider implements StorageProvider {
       } catch (err) {
         core.debug(`Failed to delete evicted archive ${entry.archivePath}: ${err}`);
       }
+
+      // Delete manifest for local provider
+      await this.deleteManifestIfLocal(entry.archivePath);
     }
 
     if (evictedEntries.length > 0) {
@@ -249,6 +256,26 @@ export abstract class BaseStorageProvider implements StorageProvider {
     // Update index
     const updatedIndex = addEntry(index, entry);
     await this.indexStore.save(updatedIndex);
+  }
+
+  /**
+   * Delete manifest file if this is a local storage backend
+   * Best-effort operation - doesn't throw on failure
+   */
+  protected async deleteManifestIfLocal(archivePath: string): Promise<void> {
+    // Only delete manifests for local storage backend
+    // Check if backend has getFullPath method (local backend specific)
+    if ('getFullPath' in this.backend && typeof this.backend.getFullPath === 'function') {
+      try {
+        // Dynamic import to avoid circular dependency
+        const { deleteManifest } = await import('./local/manifestStore');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fullPath = (this.backend as any).getFullPath(archivePath);
+        await deleteManifest(fullPath);
+      } catch (err) {
+        core.debug(`Failed to delete manifest for ${archivePath}: ${err}`);
+      }
+    }
   }
 }
 
