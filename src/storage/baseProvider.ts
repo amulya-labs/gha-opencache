@@ -109,6 +109,10 @@ export abstract class BaseStorageProvider implements StorageProvider {
         } catch (err) {
           core.debug(`Failed to delete archive ${entry.archivePath}: ${err}`);
         }
+
+        // Delete manifest for local provider
+        await this.deleteManifestIfLocal(entry.archivePath);
+
         deletedCount++;
       } else {
         validEntries.push(entry);
@@ -123,14 +127,18 @@ export abstract class BaseStorageProvider implements StorageProvider {
 
   /**
    * Evict entries using LRU until total size is under targetBytes
+   * Returns updated index and list of entries to delete (deletion deferred to caller)
    */
-  protected async evictToSize(index: CacheIndex, targetBytes: number): Promise<CacheIndex> {
+  protected async evictToSize(
+    index: CacheIndex,
+    targetBytes: number
+  ): Promise<{ index: CacheIndex; toDelete: CacheEntry[] }> {
     // Filter out expired entries first
     const validEntries = filterValidEntries(index.entries);
     let currentSize = validEntries.reduce((sum, e) => sum + e.sizeBytes, 0);
 
     if (currentSize <= targetBytes) {
-      return { ...index, entries: validEntries };
+      return { index: { ...index, entries: validEntries }, toDelete: [] };
     }
 
     // Sort by LRU - oldest accessed first (least recently used at start)
@@ -145,8 +153,22 @@ export abstract class BaseStorageProvider implements StorageProvider {
       currentSize -= entry.sizeBytes;
     }
 
-    // Delete evicted archives
-    for (const entry of evictedEntries) {
+    if (evictedEntries.length > 0) {
+      core.info(`Will evict ${evictedEntries.length} entries to stay under cache size limit`);
+    }
+
+    return {
+      index: { ...index, entries: remainingEntries },
+      toDelete: evictedEntries,
+    };
+  }
+
+  /**
+   * Delete evicted entries (archives and manifests)
+   * Should be called after index is successfully saved
+   */
+  protected async deleteEvictedEntries(entries: CacheEntry[]): Promise<void> {
+    for (const entry of entries) {
       try {
         if (await this.backend.exists(entry.archivePath)) {
           await this.backend.delete(entry.archivePath);
@@ -155,22 +177,22 @@ export abstract class BaseStorageProvider implements StorageProvider {
       } catch (err) {
         core.debug(`Failed to delete evicted archive ${entry.archivePath}: ${err}`);
       }
-    }
 
-    if (evictedEntries.length > 0) {
-      core.info(`Evicted ${evictedEntries.length} entries to stay under cache size limit`);
+      // Delete manifest for local provider
+      await this.deleteManifestIfLocal(entry.archivePath);
     }
-
-    return { ...index, entries: remainingEntries };
   }
 
   /**
    * Check if eviction is needed and perform it if so
-   * Returns the updated index
+   * Returns the updated index and list of entries to delete (deletion deferred to caller)
    */
-  protected async maybeEvict(index: CacheIndex, newEntrySize: number): Promise<CacheIndex> {
+  protected async maybeEvict(
+    index: CacheIndex,
+    newEntrySize: number
+  ): Promise<{ index: CacheIndex; toDelete: CacheEntry[] }> {
     if (!this.options.maxCacheSizeGb || this.options.maxCacheSizeGb <= 0) {
-      return index;
+      return { index, toDelete: [] };
     }
 
     const maxBytes = this.options.maxCacheSizeGb * BYTES_PER_GB;
@@ -183,14 +205,14 @@ export abstract class BaseStorageProvider implements StorageProvider {
         core.warning(
           `Cache entry (${formatBytes(newEntrySize)}) exceeds max cache size (${formatBytes(maxBytes)}). Entry will be saved but may be evicted immediately on next save.`
         );
-        return index;
+        return { index, toDelete: [] };
       }
       // Evict to make room
       const targetSize = maxBytes - newEntrySize;
       return this.evictToSize(index, targetSize);
     }
 
-    return index;
+    return { index, toDelete: [] };
   }
 
   /**
@@ -244,11 +266,37 @@ export abstract class BaseStorageProvider implements StorageProvider {
     index = cleanedIndex;
 
     // Check if we need to evict entries before adding
-    index = await this.maybeEvict(index, entry.sizeBytes);
+    const { index: evictedIndex, toDelete } = await this.maybeEvict(index, entry.sizeBytes);
+    index = evictedIndex;
 
     // Update index
     const updatedIndex = addEntry(index, entry);
     await this.indexStore.save(updatedIndex);
+
+    // Delete evicted entries AFTER index save succeeds
+    if (toDelete.length > 0) {
+      await this.deleteEvictedEntries(toDelete);
+    }
+  }
+
+  /**
+   * Delete manifest file if this is a local storage backend
+   * Best-effort operation - doesn't throw on failure
+   */
+  protected async deleteManifestIfLocal(archivePath: string): Promise<void> {
+    // Only delete manifests for local storage backend
+    // Check if backend has getFullPath method (local backend specific)
+    if ('getFullPath' in this.backend && typeof this.backend.getFullPath === 'function') {
+      try {
+        // Dynamic import to avoid circular dependency
+        const { deleteManifest } = await import('./local/manifestStore');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fullPath = (this.backend as any).getFullPath(archivePath);
+        await deleteManifest(fullPath);
+      } catch (err) {
+        core.debug(`Failed to delete manifest for ${archivePath}: ${err}`);
+      }
+    }
   }
 }
 

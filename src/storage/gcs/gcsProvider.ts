@@ -136,12 +136,18 @@ export class GCSStorageProvider extends BaseStorageProvider implements StoragePr
           accessedAt: now,
         };
 
-        // Check if we need to evict entries before adding
-        index = await this.maybeEvict(index, entry.sizeBytes);
+        // Check if we need to evict entries before adding (defers deletion)
+        const { index: evictedIndex, toDelete } = await this.maybeEvict(index, entry.sizeBytes);
+        index = evictedIndex;
 
         // Update index
         const updatedIndex = addEntry(index, entry);
         await this.indexStore.save(updatedIndex);
+
+        // Delete evicted entries AFTER index save succeeds
+        if (toDelete.length > 0) {
+          await this.deleteEvictedEntries(toDelete);
+        }
 
         core.info(`Cache saved: ${key} (${formatBytes(entry.sizeBytes)})`);
 

@@ -5,6 +5,7 @@ import * as core from '@actions/core';
 import { IndexStore } from '../interfaces';
 import { CacheIndex } from '../../keyResolver/indexManager';
 import { INDEX_FILE, INDEX_VERSION } from '../../constants';
+import { rebuildIndexFromManifests, shouldRebuildIndex } from './indexRebuilder';
 
 /**
  * File-based index store using JSON files
@@ -20,10 +21,28 @@ export class FileIndexStore implements IndexStore {
   }
 
   async load(): Promise<CacheIndex> {
-    // File doesn't exist - expected, return empty index
+    // Manual rebuild requested
+    if (shouldRebuildIndex()) {
+      core.info('Manual index rebuild requested (OPENCACHE_REBUILD_INDEX=1)');
+      const rebuiltIndex = await rebuildIndexFromManifests(this.cacheDir);
+      await this.save(rebuiltIndex);
+      return rebuiltIndex;
+    }
+
+    // File doesn't exist - check if manifests exist for rebuild
     if (!fs.existsSync(this.indexPath)) {
-      core.debug(`Index file not found at ${this.indexPath}, returning empty index`);
-      return createEmptyIndex();
+      core.debug(`Index file not found at ${this.indexPath}`);
+      const rebuiltIndex = await rebuildIndexFromManifests(this.cacheDir);
+
+      // Only save if we found manifests to rebuild from
+      if (rebuiltIndex.entries.length > 0) {
+        core.info('Rebuilt index from manifests (missing index.json)');
+        await this.save(rebuiltIndex);
+      } else {
+        core.debug('No manifests found, returning empty index');
+      }
+
+      return rebuiltIndex;
     }
 
     let content: string | undefined;
@@ -38,12 +57,16 @@ export class FileIndexStore implements IndexStore {
       }
 
       if (index.version !== INDEX_VERSION) {
-        // Unknown future version - return empty to be safe
+        // Unknown future version - try rebuild from manifests
         core.warning(
           `Index version ${index.version} is not recognized (expected ${INDEX_VERSION}). ` +
-            `Returning empty index. Cache entries will appear missing until new caches are saved.`
+            `Attempting to rebuild from manifests.`
         );
-        return createEmptyIndex();
+        const rebuiltIndex = await rebuildIndexFromManifests(this.cacheDir);
+        if (rebuiltIndex.entries.length > 0) {
+          await this.save(rebuiltIndex);
+        }
+        return rebuiltIndex;
       }
 
       return index;
@@ -80,11 +103,11 @@ export class FileIndexStore implements IndexStore {
         throw new Error(`I/O error reading cache index at ${this.indexPath}: ${error.message}`);
       }
 
-      // JSON parse error or other recoverable error - log warning and return empty
+      // JSON parse error - try rebuild from manifests
       if (error instanceof SyntaxError || error.name === 'SyntaxError') {
         core.warning(
           `Cache index at ${this.indexPath} is corrupted (invalid JSON). ` +
-            `Returning empty index. Cache entries will appear missing until new caches are saved. Error: ${error.message}`
+            `Attempting to rebuild from manifests. Error: ${error.message}`
         );
         // Log content preview safely without re-reading file (avoid race conditions and additional errors)
         if (content) {
@@ -98,7 +121,11 @@ export class FileIndexStore implements IndexStore {
             // Ignore preview errors
           }
         }
-        return createEmptyIndex();
+        const rebuiltIndex = await rebuildIndexFromManifests(this.cacheDir);
+        if (rebuiltIndex.entries.length > 0) {
+          await this.save(rebuiltIndex);
+        }
+        return rebuiltIndex;
       }
 
       // Unknown error - log and propagate

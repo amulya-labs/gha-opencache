@@ -50,6 +50,7 @@ export const DEFAULT_CACHE_PATH = '/srv/gha-cache/v1';
 export const INDEX_FILE = 'index.json';
 export const ARCHIVES_DIR = 'archives';
 export const INDEX_VERSION = '2';
+export const MANIFEST_VERSION = '2';
 
 // Compression defaults
 export const DEFAULT_COMPRESSION = 'auto';

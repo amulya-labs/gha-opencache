@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import {
   CompressionOptions,
+  CompressionMethod,
   resolveCompressionMethod,
   getArchiveExtension,
   compressArchive,
@@ -17,6 +18,7 @@ export interface CreateArchiveResult {
   archivePath: string;
   hash: string;
   sizeBytes: number;
+  compressionMethod: CompressionMethod;
 }
 
 export async function createArchive(
@@ -63,6 +65,7 @@ export async function createArchive(
     archivePath: finalArchivePath,
     hash,
     sizeBytes: stats.size,
+    compressionMethod: method,
   };
 }
 
