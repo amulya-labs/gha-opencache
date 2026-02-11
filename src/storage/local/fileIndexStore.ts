@@ -26,8 +26,9 @@ export class FileIndexStore implements IndexStore {
       return createEmptyIndex();
     }
 
+    let content: string | undefined;
     try {
-      const content = fs.readFileSync(this.indexPath, 'utf-8');
+      content = fs.readFileSync(this.indexPath, 'utf-8');
       const index = JSON.parse(content) as CacheIndex;
 
       // Handle version migration
@@ -40,7 +41,7 @@ export class FileIndexStore implements IndexStore {
         // Unknown future version - return empty to be safe
         core.warning(
           `Index version ${index.version} is not recognized (expected ${INDEX_VERSION}). ` +
-            `Returning empty index. Cache entries will be rebuilt.`
+            `Returning empty index. Cache entries will appear missing until new caches are saved.`
         );
         return createEmptyIndex();
       }
@@ -50,6 +51,15 @@ export class FileIndexStore implements IndexStore {
       const error = err as NodeJS.ErrnoException;
 
       // Handle specific error types
+      if (error.code === 'ENOENT') {
+        // File disappeared between existsSync check and readFileSync (race condition)
+        // This is expected behavior - treat same as initial file-not-found
+        core.debug(
+          `Index file disappeared during read at ${this.indexPath} (race condition), returning empty index`
+        );
+        return createEmptyIndex();
+      }
+
       if (error.code === 'EACCES' || error.code === 'EPERM') {
         // Permission denied - this is a fatal error that should be surfaced
         throw new Error(
@@ -74,11 +84,18 @@ export class FileIndexStore implements IndexStore {
       if (error instanceof SyntaxError || error.name === 'SyntaxError') {
         core.warning(
           `Cache index at ${this.indexPath} is corrupted (invalid JSON). ` +
-            `Returning empty index. Cache entries will be rebuilt. Error: ${error.message}`
+            `Returning empty index. Cache entries will appear missing until new caches are saved. Error: ${error.message}`
         );
-        core.debug(
-          `Corrupted index content preview: ${fs.readFileSync(this.indexPath, 'utf-8').substring(0, 200)}`
-        );
+        // Log content preview safely without re-reading file (avoid race conditions and additional errors)
+        if (content) {
+          try {
+            const preview = content.substring(0, 200);
+            // Only log length and first few chars to avoid leaking cache keys/paths
+            core.debug(`Corrupted index length: ${content.length} bytes, preview: ${preview.substring(0, 50)}...`);
+          } catch {
+            // Ignore preview errors
+          }
+        }
         return createEmptyIndex();
       }
 

@@ -295,7 +295,7 @@ compression-level: 9    # Increase compression
 
 Manual cleanup:
 ```bash
-find /srv/gha-cache/v1 -type f -mtime +30 -delete
+find /srv/gha-cache/v1 -type f -mtime +7 -delete
 ```
 
 ### Slow Cache Operations
