@@ -3,7 +3,7 @@ name: Node.js with Basic Cache
 #
 # Local filesystem storage (storage-provider: local):
 # - Requires SELF-HOSTED RUNNERS with persistent disk
-# - Cache stored on runner's disk at /srv/gha-cache/v1 (default)
+# - Cache stored on runner's disk at /srv/gha-cache (default)
 # - Fast, no external dependencies
 #
 # For GitHub-hosted runners, use S3/GCS storage backends instead (see s3-*.yml, gcs-*.yml examples)
@@ -33,7 +33,7 @@ jobs:
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: npm-${{ runner.os }}-
           # storage-provider: local  # Default: uses local filesystem on self-hosted runner
-          # cache-path: /srv/gha-cache/v1  # Default: where cache is stored on runner disk
+          # cache-path: /srv/gha-cache  # Default: where cache is stored on runner disk
 
       - name: Install dependencies
         run: npm ci

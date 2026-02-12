@@ -33,9 +33,9 @@ max-cache-size-gb: 20
 
 Linux/macOS:
 ```bash
-sudo mkdir -p /srv/gha-cache/v1
-sudo chown -R runner-user:runner-group /srv/gha-cache/v1
-chmod 755 /srv/gha-cache/v1
+sudo mkdir -p /srv/gha-cache
+sudo chown -R runner-user:runner-group /srv/gha-cache
+chmod 755 /srv/gha-cache
 ```
 
 Windows (PowerShell as Admin):
@@ -43,7 +43,7 @@ Windows (PowerShell as Admin):
 New-Item -Path "C:\gha-cache\v1" -ItemType Directory -Force
 ```
 
-**Verify:** `sudo -u runner-user touch /srv/gha-cache/v1/test && rm /srv/gha-cache/v1/test`
+**Verify:** `sudo -u runner-user touch /srv/gha-cache/test && rm /srv/gha-cache/test`
 
 **Storage:** `(repos) × (max-cache-size-gb) × 1.2` (e.g., 5 repos × 10 GB × 1.2 = 60 GB)
 
@@ -57,7 +57,7 @@ New-Item -Path "C:\gha-cache\v1" -ItemType Directory -Force
 0 */6 * * * df -h /srv/gha-cache | mail -s "Cache" admin@example.com
 
 # Manual cleanup (>7 days, matching default TTL)
-find /srv/gha-cache/v1 -type f -mtime +7 -delete
+find /srv/gha-cache -type f -mtime +7 -delete
 ```
 
 </details>
@@ -231,7 +231,7 @@ jobs:
 **Save:** `key: test-${{ github.run_number }}` **Restore:** `key: test-999, restore-keys: test-`
 
 **Verify storage:**
-- Local: `ls /srv/gha-cache/v1/owner/repo/archives/`
+- Local: `ls /srv/gha-cache/owner/repo/archives/`
 - S3: `aws s3 ls s3://my-bucket/gha-cache/ --recursive`
 - GCS: `gsutil ls -r gs://my-bucket/gha-cache/`
 

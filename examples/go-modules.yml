@@ -5,7 +5,7 @@ name: Go with Module Cache
 # 1. Local filesystem (shown below):
 #    - Requires: self-hosted runners with persistent disk
 #    - Fastest, no external dependencies
-#    - Cache stored at /srv/gha-cache/v1 (default)
+#    - Cache stored at /srv/gha-cache (default)
 #
 # 2. S3/GCS backends (see s3-*.yml, gcs-*.yml):
 #    - Works on: GitHub-hosted OR self-hosted runners
