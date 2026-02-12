@@ -72,9 +72,8 @@ git checkout -b hotfix/description vX.Y.Z
 
 **Tag already exists:**
 ```bash
-git tag -d vX.Y.Z
-git push origin :refs/tags/vX.Y.Z
-# Then recreate
+git tag -f vX.Y.Z
+git push --force origin vX.Y.Z
 ```
 
 **Delete a release:**
