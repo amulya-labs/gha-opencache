@@ -61,8 +61,8 @@
 - ☁️ **S3-compatible** — AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces
 - 🌐 **Google Cloud Storage** — Native GCS with Workload Identity support
 - 🔄 **Smart restore-keys** — Prefix matching with newest-first selection
-- 🗜️ **Flexible compression** — zstd, gzip, or none (actions/cache: zstd only)
-- ⏰ **Configurable TTL** — Auto-expire old caches (actions/cache: no control)
+- 🗜️ **Flexible compression** — zstd, gzip, or none (`actions/cache`: `zstd` only)
+- ⏰ **Configurable TTL** — Auto-expire old caches (`actions/cache`: no control)
 - 📊 **Size limits** — LRU eviction when cache exceeds limits
 - 🛡️ **Self-healing** — Automatic recovery from index corruption
 - 💻 **Cross-platform** — Linux, macOS, Windows
@@ -80,9 +80,9 @@
 | API compatibility | — | ✅ 100% |
 | Configurable TTL | ❌ | ✅ |
 | Cache size limits | ❌ | ✅ |
-| Compression options | zstd | zstd, gzip, none |
+| Compression options | `zstd` | `zstd`, `gzip`, none |
 
-**Use `actions/cache`** for GitHub-hosted runners | **Use `gha-opencache`** for self-hosted runners
+**Use [`actions/cache`](https://github.com/actions/cache)** for GitHub-hosted runners | **Use [`gha-opencache`](https://github.com/amulya-labs/gha-opencache)** for self-hosted runners
 
 ## Options
 
