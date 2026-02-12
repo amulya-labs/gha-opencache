@@ -82,7 +82,7 @@
 | Cache size limits | ❌ | ✅ |
 | Compression options | `zstd` | `zstd`, `gzip`, none |
 
-**Use [`actions/cache`](https://github.com/actions/cache)** for GitHub-hosted runners | **Use [`gha-opencache`](https://github.com/amulya-labs/gha-opencache)** for self-hosted runners
+💡 **With S3/GCS storage, share cache across self-hosted and GitHub-hosted runners** — migrate between runner types without losing your cache
 
 ## Options
 
