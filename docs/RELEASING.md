@@ -1,5 +1,7 @@
 # Releasing
 
+Requires: [GitHub CLI](https://cli.github.com/) (`gh`) authenticated with push access.
+
 ## Quick Reference
 
 #### Define Versions
@@ -30,6 +32,9 @@ git tag -d v${MAJOR_VERSION} 2>/dev/null
 git push origin :refs/tags/v${MAJOR_VERSION} 2>/dev/null
 git tag v${MAJOR_VERSION} v${NEW_VERSION}
 git push origin v${MAJOR_VERSION}
+
+# Verify
+gh release view v${NEW_VERSION}
 ```
 
 ## Versioning
@@ -48,6 +53,9 @@ git tag --list 'v*' | sort -V
 
 # View changes since last release
 git log v1.0.0..HEAD --oneline --no-merges
+
+# Or view merged PRs
+gh pr list --state merged --base main --limit 10
 ```
 
 <details>
