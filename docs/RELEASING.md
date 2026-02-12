@@ -2,6 +2,17 @@
 
 Requires: [GitHub CLI](https://cli.github.com/) (`gh`) authenticated with push access.
 
+## First-Time Marketplace Setup
+
+Before your first release, publish to the GitHub Marketplace manually (one-time):
+
+1. Go to **Releases → Create a new release** in the GitHub UI
+2. Check **"Publish this Action to the GitHub Marketplace"**
+3. Accept the GitHub Marketplace Developer Agreement
+4. Complete the release
+
+After this initial setup, all subsequent releases via `gh release create` will automatically update the marketplace listing.
+
 ## Quick Reference
 
 #### Define Version
