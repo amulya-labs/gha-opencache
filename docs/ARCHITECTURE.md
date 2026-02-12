@@ -36,8 +36,8 @@ This prevents lock contention during concurrent saves.
 {cache-path}/{owner}/{repo}/
   ├── index.json
   └── archives/
-      ├── sha256-{hash}.tar.zst
-      └── sha256-{hash}.tar.zst.meta.json
+      ├── sha256-{hash}.tar.{compression}
+      └── sha256-{hash}.tar.{compression}.meta.json
 ```
 
 **S3/GCS:**
