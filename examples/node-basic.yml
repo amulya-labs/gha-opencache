@@ -3,7 +3,7 @@ name: Node.js with Basic Cache
 #
 # Local filesystem storage (storage-provider: local):
 # - Requires SELF-HOSTED RUNNERS with persistent disk
-# - Cache stored on runner's disk at /srv/gha-cache (default)
+# - Cache stored on runner's disk at ~/.cache/gha-opencache (default)
 # - Fast, no external dependencies
 #
 # For GitHub-hosted runners, use S3/GCS storage backends instead (see s3-*.yml, gcs-*.yml examples)
