@@ -4,12 +4,11 @@ Requires: [GitHub CLI](https://cli.github.com/) (`gh`) authenticated with push a
 
 ## Quick Reference
 
-#### Define Versions
+#### Define Version
 ```bash
 # === RELEASE SCRIPT ===
-# Update these variables for your release
+# Update this variable for your release
 NEW_VERSION="1.0.1"
-MAJOR_VERSION="1"
 ```
 
 #### Create Release
@@ -25,11 +24,8 @@ git tag v${NEW_VERSION}
 git push origin v${NEW_VERSION}
 
 # Create GitHub release with auto-generated notes
+# Note: Floating major tag (v1) is updated automatically by GitHub Actions
 gh release create v${NEW_VERSION} --generate-notes --title "v${NEW_VERSION}"
-
-# Update floating major tag (e.g., v1 -> points to v1.0.1)
-git tag -f v${MAJOR_VERSION} v${NEW_VERSION}
-git push --force origin v${MAJOR_VERSION}
 
 # Verify
 gh release view v${NEW_VERSION}
