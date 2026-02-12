@@ -120,13 +120,15 @@ export class LocalStorageBackend implements StorageBackend {
         throw new Error(
           `Permission denied creating cache directory: ${this.archivesDir}\n\n` +
             `To fix this, either:\n` +
-            `  1. Use the default cache path (recommended):\n` +
+            `  1. Use the default cache path (recommended for non-Docker):\n` +
             `     Remove 'cache-path' input to use ~/.cache/gha-opencache\n\n` +
-            `  2. Fix permissions on existing path:\n` +
+            `  2. Fix permissions on your custom path:\n` +
             `     sudo mkdir -p ${parentDir}\n` +
             `     sudo chown -R $(whoami) ${parentDir}\n\n` +
-            `  3. Use a different writable path:\n` +
-            `     cache-path: /tmp/gha-cache`
+            `  3. Set OPENCACHE_PATH env var on runners:\n` +
+            `     export OPENCACHE_PATH=/path/with/write/access\n\n` +
+            `  4. For Docker: mount a host volume and set cache-path\n` +
+            `     See: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md`
         );
       }
       throw err;
