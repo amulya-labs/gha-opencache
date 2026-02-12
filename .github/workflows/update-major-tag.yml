@@ -11,11 +11,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
       - name: Update major version tag
         run: |
           VERSION=${GITHUB_REF_NAME}  # e.g., v1.2.1
           MAJOR=$(echo $VERSION | cut -d. -f1)  # e.g., v1
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -fa $MAJOR -m "Latest $MAJOR.x release"
+          git tag -fa "$MAJOR" "$VERSION" -m "Latest $MAJOR.x release"
           git push --force origin $MAJOR
