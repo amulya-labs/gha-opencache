@@ -34,11 +34,11 @@ The floating major tag (e.g., `v2`) is updated automatically by GitHub Actions.
 
 ## Versioning
 
-- **MAJOR** (`v2.0.0`): Breaking changes
-- **MINOR** (`v2.1.0`): New features, backward compatible
-- **PATCH** (`v2.0.1`): Bug fixes
+- **MAJOR** (`vX.0.0`): Breaking changes
+- **MINOR** (`vX.Y.0`): New features, backward compatible
+- **PATCH** (`vX.Y.Z`): Bug fixes
 
-Users reference `@v2` (floating tag) to get compatible updates automatically.
+Users reference `@vX` (floating major tag) to get compatible updates automatically.
 
 ## Choosing a Version
 
@@ -58,7 +58,7 @@ gh pr list --state merged --base main --limit 10
 
 ### Setup Requirements
 
-The release workflow requires a `PUBLIC_REPO_WRITE_PAT` secret with `contents: write` permission to update floating major tags.
+The release workflow requires a `PUBLIC_REPO_WRITE_PAT` secret configured as a fine-grained PAT restricted to this repository with **Repository permissions > Contents: Read and write** to update floating major tags.
 
 ### Important: Never Create Releases for Major Tags
 
