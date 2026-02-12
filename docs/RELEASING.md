@@ -66,7 +66,8 @@ gh pr list --state merged --base main --limit 10
 ```bash
 # Create hotfix branch from release tag
 git checkout -b hotfix/description vX.Y.Z
-# Make fixes, commit, PR, merge, then release new patch
+# Make fixes, commit, create PR targeting main
+# After merge, follow the standard release steps above to publish a new patch version
 ```
 
 ### Troubleshooting
