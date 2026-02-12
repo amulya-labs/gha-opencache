@@ -2,12 +2,16 @@
 
 ## Quick Reference
 
+#### Define Versions
 ```bash
 # === RELEASE SCRIPT ===
 # Update these variables for your release
 NEW_VERSION="1.0.1"
 MAJOR_VERSION="1"
+```
 
+#### Create Release
+```bash
 # Ensure main is up to date
 git checkout main && git pull origin main
 
@@ -30,9 +34,9 @@ git push origin v${MAJOR_VERSION}
 
 ## Versioning
 
-- **MAJOR** (v2.0.0): Breaking changes
-- **MINOR** (v1.1.0): New features, backward compatible
-- **PATCH** (v1.0.1): Bug fixes
+- **MAJOR** (`v2.0.0`): Breaking changes
+- **MINOR** (`v1.1.0`): New features, backward compatible
+- **PATCH** (`v1.0.1`): Bug fixes
 
 Users reference `@v1` (floating tag) to get compatible updates automatically.
 
