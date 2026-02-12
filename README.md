@@ -1,11 +1,13 @@
-# gha-opencache
+# OpenCache Actions
 
 [![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amulya-labs/gha-opencache/badge)](https://securityscorecards.dev/viewer/?uri=github.com/amulya-labs/gha-opencache)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.
+Fast, configurable drop-in replacement for `actions/cache` with pluggable backends (local disk, S3-compatible, GCS).
+
+> 100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.
 
 ## Quick Start
 
@@ -53,7 +55,7 @@
 > [MIGRATION.md](MIGRATION.md) - Setup instructions for all storage backends
 > [examples/](examples/) - Complete workflow examples
 
-## Why `gha-opencache`?
+## Why *OpenCache Actions*?
 
 - ⚡ **Blazing fast** — Local storage uses disk I/O only, no network roundtrips
 - 🔌 **Drop-in replacement** — 100% API compatible with `actions/cache`
@@ -69,7 +71,7 @@
 
 ### vs [actions/cache](https://github.com/actions/cache)
 
-| Feature | actions/cache | gha-opencache |
+| Feature | actions/cache | OpenCache Actions |
 |---------|:-------------:|:-------------:|
 | GitHub-hosted runners | ✅ | ❌ |
 | Self-hosted runners | ⚠️ Limited | ✅ |
