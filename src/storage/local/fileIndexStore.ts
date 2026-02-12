@@ -169,8 +169,15 @@ export class FileIndexStore implements IndexStore {
       // Classify error types for better diagnostics
       if (error.code === 'EACCES' || error.code === 'EPERM') {
         throw new Error(
-          `Permission denied writing cache index to ${this.indexPath}. ` +
-            `Please check directory permissions: ${error.message}`
+          `Permission denied writing cache index to ${this.indexPath}\n\n` +
+            `To fix this, either:\n` +
+            `  1. Use the default cache path (recommended):\n` +
+            `     Remove 'cache-path' input to use ~/.cache/gha-opencache\n\n` +
+            `  2. Fix permissions on existing path:\n` +
+            `     sudo mkdir -p ${this.cacheDir}\n` +
+            `     sudo chown -R $(whoami) ${this.cacheDir}\n\n` +
+            `  3. Use a different writable path:\n` +
+            `     cache-path: /tmp/gha-cache`
         );
       }
 
