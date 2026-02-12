@@ -27,7 +27,7 @@ import { CompressionOptions } from '../archive/compression';
  *   type: 'local',
  *   owner: 'myorg',
  *   repo: 'myrepo',
- *   options: { basePath: '/srv/gha-cache/v1' },
+ *   options: { basePath: '/srv/gha-cache' },
  * });
  *
  * // S3 storage

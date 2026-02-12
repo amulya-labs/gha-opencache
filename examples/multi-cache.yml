@@ -5,7 +5,7 @@ name: Multiple Caches
 # 1. Local filesystem (shown below):
 #    - Requires: self-hosted runners with persistent disk
 #    - Fastest, no external dependencies
-#    - Each cache stored independently at /srv/gha-cache/v1
+#    - Each cache stored independently at /srv/gha-cache
 #
 # 2. S3/GCS backends (see s3-*.yml, gcs-*.yml):
 #    - Works on: GitHub-hosted OR self-hosted runners

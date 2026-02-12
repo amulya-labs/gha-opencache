@@ -74,7 +74,7 @@ export interface LockManager {
  * Options for local filesystem storage
  */
 export interface LocalStorageOptions {
-  /** Base path for cache storage (e.g., /srv/gha-cache/v1) */
+  /** Base path for cache storage (e.g., /srv/gha-cache) */
   basePath: string;
 }
 

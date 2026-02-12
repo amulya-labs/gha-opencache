@@ -20,7 +20,7 @@ jobs:
         with:
           path: target/
           key: build-cache
-      # Cache saved to /srv/gha-cache/v1 INSIDE container
+      # Cache saved to /srv/gha-cache INSIDE container
 
   test:
     needs: build
@@ -31,7 +31,7 @@ jobs:
         with:
           path: target/
           key: build-cache
-      # Cache not found! Different container = different /srv/gha-cache/v1
+      # Cache not found! Different container = different /srv/gha-cache
 ```
 
 **Result**: Build saves cache successfully, Test can't find it 13 seconds later.
@@ -72,8 +72,8 @@ jobs:
 
 **How it works**:
 - Both containers mount `/srv/gha-cache` from the **host** to `/srv/gha-cache` in the **container**
-- Build saves to `/srv/gha-cache/v1/owner/repo/` (which writes to host)
-- Test reads from `/srv/gha-cache/v1/owner/repo/` (which reads from host)
+- Build saves to `/srv/gha-cache/owner/repo/` (which writes to host)
+- Test reads from `/srv/gha-cache/owner/repo/` (which reads from host)
 - Caches are shared! ✅
 
 ### Option 2: Custom Cache Path
@@ -119,7 +119,7 @@ After configuring volumes, verify the setup:
 - name: Verify cache volume
   run: |
     echo "Cache directory from container:"
-    ls -la /srv/gha-cache/v1/ || echo "Cache directory not mounted!"
+    ls -la /srv/gha-cache/ || echo "Cache directory not mounted!"
     echo ""
     echo "Container ID:"
     cat /proc/self/cgroup | grep docker
@@ -139,7 +139,7 @@ After configuring volumes, verify the setup:
 - name: Debug cache state
   run: |
     echo "=== Cache directory exists? ==="
-    ls -la /srv/gha-cache/v1/
+    ls -la /srv/gha-cache/
 
     echo "=== Is it mounted from host? ==="
     mount | grep gha-cache || echo "NOT MOUNTED - This is the problem!"
@@ -160,9 +160,9 @@ After configuring volumes, verify the setup:
 **Solution**:
 ```bash
 # On the host, make cache directory writable
-sudo chown -R 1000:1000 /srv/gha-cache/v1
+sudo chown -R 1000:1000 /srv/gha-cache
 # Or make it world-writable (less secure)
-sudo chmod -R 777 /srv/gha-cache/v1
+sudo chmod -R 777 /srv/gha-cache
 ```
 
 Or run container as specific user:
