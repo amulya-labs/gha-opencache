@@ -117,7 +117,7 @@
 | `ttl-days` | Days until cache expires (0 = never) | `7` |
 | `max-cache-size-gb` | Max size per repo in GB (0 = unlimited) | `10` |
 
-*Platform-specific defaults: Linux: `$HOME/.cache/gha-opencache`, macOS: `~/Library/Caches/gha-opencache`, Windows: `%LOCALAPPDATA%\gha-opencache`. Override with `OPENCACHE_PATH` env var.
+* Platform-specific defaults: Linux: `$HOME/.cache/gha-opencache` (respects `XDG_CACHE_HOME` when set), macOS: `~/Library/Caches/gha-opencache`, Windows: `%LOCALAPPDATA%\gha-opencache`. Override with `OPENCACHE_PATH` env var.
 
 **Environment variables for cloud storage:**
 - S3: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`

@@ -36,7 +36,7 @@ inputs:
 
   # Local provider options
   cache-path:
-    description: 'Base path for local cache storage. Default: $HOME/.cache/gha-opencache (Linux), ~/Library/Caches/gha-opencache (macOS), %LOCALAPPDATA%\gha-opencache (Windows). Override with OPENCACHE_PATH env var.'
+    description: 'Base path for local cache storage. Default: $XDG_CACHE_HOME/gha-opencache or $HOME/.cache/gha-opencache (Linux), ~/Library/Caches/gha-opencache (macOS), %LOCALAPPDATA%\gha-opencache (Windows). Override with OPENCACHE_PATH env var.'
     required: false
 
   # S3 provider options

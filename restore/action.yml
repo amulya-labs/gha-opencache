@@ -32,7 +32,7 @@ inputs:
 
   # Local provider options
   cache-path:
-    description: 'Base path for local cache storage. Default: $HOME/.cache/gha-opencache (Linux), ~/Library/Caches/gha-opencache (macOS), %LOCALAPPDATA%\gha-opencache (Windows)'
+    description: 'Base path for local cache storage. Default: $HOME/.cache/gha-opencache (Linux), ~/Library/Caches/gha-opencache (macOS), %LOCALAPPDATA%\gha-opencache (Windows). Can be overridden with the OPENCACHE_PATH environment variable.'
     required: false
 
   # S3 provider options

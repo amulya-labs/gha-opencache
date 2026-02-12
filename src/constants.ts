@@ -1,3 +1,6 @@
+import * as os from 'os';
+import * as path from 'path';
+
 export enum Inputs {
   Key = 'key',
   Path = 'path',
@@ -59,23 +62,23 @@ export function getDefaultCachePath(): string {
 
   // Platform-specific defaults following XDG/platform conventions
   const platform = process.platform;
-  const home = process.env.HOME || process.env.USERPROFILE || '';
+  const home = os.homedir();
 
   if (platform === 'win32') {
     // Windows: %LOCALAPPDATA%\gha-opencache
-    const localAppData = process.env.LOCALAPPDATA || `${home}\\AppData\\Local`;
-    return `${localAppData}\\gha-opencache`;
+    const localAppData = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+    return path.join(localAppData, 'gha-opencache');
   }
 
   if (platform === 'darwin') {
     // macOS: ~/Library/Caches/gha-opencache
-    return `${home}/Library/Caches/gha-opencache`;
+    return path.join(home, 'Library', 'Caches', 'gha-opencache');
   }
 
   // Linux/Unix: Follow XDG Base Directory spec
   // $XDG_CACHE_HOME defaults to $HOME/.cache
-  const xdgCacheHome = process.env.XDG_CACHE_HOME || `${home}/.cache`;
-  return `${xdgCacheHome}/gha-opencache`;
+  const xdgCacheHome = process.env.XDG_CACHE_HOME || path.join(home, '.cache');
+  return path.join(xdgCacheHome, 'gha-opencache');
 }
 export const INDEX_FILE = 'index.json';
 export const ARCHIVES_DIR = 'archives';
