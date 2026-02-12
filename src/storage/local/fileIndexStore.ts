@@ -89,7 +89,7 @@ export class FileIndexStore implements IndexStore {
           `Permission denied reading cache index at ${this.indexPath}\n\n` +
             `To fix this, either:\n` +
             `  1. Use the default cache path (recommended for non-Docker):\n` +
-            `     Remove 'cache-path' input to use ~/.cache/gha-opencache\n\n` +
+            `     Remove 'cache-path' input to use the platform default\n\n` +
             `  2. Fix permissions on your custom path:\n` +
             `     sudo chown -R $(whoami) ${this.cacheDir}\n\n` +
             `  3. Set OPENCACHE_PATH env var on runners:\n` +
@@ -180,7 +180,7 @@ export class FileIndexStore implements IndexStore {
           `Permission denied writing cache index to ${this.indexPath}\n\n` +
             `To fix this, either:\n` +
             `  1. Use the default cache path (recommended for non-Docker):\n` +
-            `     Remove 'cache-path' input to use ~/.cache/gha-opencache\n\n` +
+            `     Remove 'cache-path' input to use the platform default\n\n` +
             `  2. Fix permissions on your custom path:\n` +
             `     sudo mkdir -p ${this.cacheDir}\n` +
             `     sudo chown -R $(whoami) ${this.cacheDir}\n\n` +
