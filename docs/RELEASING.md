@@ -34,11 +34,11 @@ The floating major tag (e.g., `v2`) is updated automatically by GitHub Actions.
 
 ## Versioning
 
-- **MAJOR** (`vX.0.0`): Breaking changes
-- **MINOR** (`vX.Y.0`): New features, backward compatible
-- **PATCH** (`vX.Y.Z`): Bug fixes
+- **MAJOR** (`v2.0.0`): Breaking changes
+- **MINOR** (`v2.1.0`): New features, backward compatible
+- **PATCH** (`v2.0.1`): Bug fixes
 
-Users reference `@vX` (floating major tag) to get compatible updates automatically.
+Users reference `@v2` (floating tag) to get compatible updates automatically.
 
 ## Choosing a Version
 
