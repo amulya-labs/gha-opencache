@@ -10,7 +10,7 @@
 ## Quick Start
 
 ```yaml
-- uses: amulya-labs/gha-opencache@v1
+- uses: amulya-labs/gha-opencache@v2
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -22,7 +22,7 @@
 
 **S3-compatible** (MinIO, R2, AWS S3, etc.):
 ```yaml
-- uses: amulya-labs/gha-opencache@v1
+- uses: amulya-labs/gha-opencache@v2
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -37,7 +37,7 @@
 
 **Google Cloud Storage**:
 ```yaml
-- uses: amulya-labs/gha-opencache@v1
+- uses: amulya-labs/gha-opencache@v2
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -98,7 +98,7 @@
 | `save-always` | Save cache even if previous steps fail | `false` |
 | **Storage** |||
 | `storage-provider` | Backend: `local`, `s3`, or `gcs` | `local` |
-| `cache-path` | Base path for local cache | `/srv/gha-cache` |
+| `cache-path` | Base path for local cache | `~/.cache/gha-opencache`* |
 | **S3** *(when storage-provider: s3)* |||
 | `s3-bucket` | S3 bucket name | *required* |
 | `s3-region` | AWS region | `us-east-1` |
@@ -116,6 +116,8 @@
 | **Lifecycle** |||
 | `ttl-days` | Days until cache expires (0 = never) | `7` |
 | `max-cache-size-gb` | Max size per repo in GB (0 = unlimited) | `10` |
+
+* Platform-specific defaults: Linux: `$HOME/.cache/gha-opencache` (respects `XDG_CACHE_HOME` when set), macOS: `~/Library/Caches/gha-opencache`, Windows: `%LOCALAPPDATA%\gha-opencache`. Override with `OPENCACHE_PATH` env var.
 
 **Environment variables for cloud storage:**
 - S3: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
@@ -225,7 +227,7 @@ Designed for reliability with self-healing cache indexes and lock-free archive c
 **Quick fixes:**
 - **Not restoring** → Check key format, verify `restore-keys` prefixes
 - **Docker containers** → Mount cache as volume: see [docs/DOCKER.md](docs/DOCKER.md)
-- **Permission denied** → Create directory: `sudo mkdir -p /srv/gha-cache && sudo chown -R runner-user:runner-group /srv/gha-cache`
+- **Permission denied** → Default path is user-writable; if using custom `cache-path`, ensure directory exists with proper permissions
 - **S3 auth fails** → Verify secrets, check IAM permissions
 - **Cache too large** → Reduce `max-cache-size-gb` or `ttl-days`
 - **Slow operations** → `compression-level: 1` or `compression: none`
@@ -243,7 +245,7 @@ Debug cache key:
 
 Check local storage:
 ```bash
-ls -la /srv/gha-cache/owner/repo/
+ls -la ~/.cache/gha-opencache/owner/repo/
 ```
 
 Verify restore-keys have no trailing slashes or extra characters.
@@ -252,39 +254,31 @@ Verify restore-keys have no trailing slashes or extra characters.
 
 **Problem**: Cache saved in one job but not found in another.
 
-**Cause**: Docker containers have isolated filesystems. Each container sees its own `/srv/gha-cache` unless mounted from host.
+**Cause**: Docker containers have isolated filesystems. Each container sees its own cache directory unless mounted from host.
 
-**Quick fix**:
+**Quick fix** (set explicit cache path and mount it):
 ```yaml
+- uses: amulya-labs/gha-opencache@v2
+  with:
+    cache-path: /cache
 container:
   image: my-image
   volumes:
-    - /srv/gha-cache:/srv/gha-cache
+    - /srv/gha-cache:/cache
 ```
 
 > **See [docs/DOCKER.md](docs/DOCKER.md)** for complete setup guide (container volumes, Kubernetes, Docker Compose, verification, troubleshooting).
 
 ### Permission Denied or Directory Missing
 
-First, check if the cache directory exists:
+The default cache path (`~/.cache/gha-opencache`) is user-writable and should work without setup.
+
+If using a custom `cache-path`, ensure the directory exists:
 ```bash
-ls -la /srv/gha-cache
+mkdir -p /your/custom/path
 ```
 
-**Directory doesn't exist:**
-```bash
-sudo mkdir -p /srv/gha-cache
-sudo chown -R runner-user:runner-group /srv/gha-cache
-chmod 755 /srv/gha-cache
-```
-
-**Directory exists but wrong permissions:**
-```bash
-sudo chown -R runner-user:runner-group /srv/gha-cache
-chmod 755 /srv/gha-cache
-```
-
-Replace `runner-user:runner-group` with your actual runner user.
+For shared/managed infrastructure, you can set `OPENCACHE_PATH` env var on all runners.
 
 ### S3 Authentication
 
@@ -309,7 +303,7 @@ compression-level: 9    # Increase compression
 
 Manual cleanup:
 ```bash
-find /srv/gha-cache -type f -mtime +7 -delete
+find ~/.cache/gha-opencache -type f -mtime +7 -delete
 ```
 
 ### Slow Cache Operations

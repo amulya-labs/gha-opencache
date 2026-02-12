@@ -86,8 +86,16 @@ export class FileIndexStore implements IndexStore {
       if (error.code === 'EACCES' || error.code === 'EPERM') {
         // Permission denied - this is a fatal error that should be surfaced
         throw new Error(
-          `Permission denied reading cache index at ${this.indexPath}. ` +
-            `Please check file permissions: ${error.message}`
+          `Permission denied reading cache index at ${this.indexPath}\n\n` +
+            `To fix this, either:\n` +
+            `  1. Use the default cache path (recommended for non-Docker):\n` +
+            `     Remove 'cache-path' input to use the platform default\n\n` +
+            `  2. Fix permissions on your custom path:\n` +
+            `     sudo chown -R $(whoami) ${this.cacheDir}\n\n` +
+            `  3. Set OPENCACHE_PATH env var on runners:\n` +
+            `     export OPENCACHE_PATH=/path/with/write/access\n\n` +
+            `  4. For Docker: mount a host volume and set cache-path\n` +
+            `     See: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md`
         );
       }
 
@@ -169,8 +177,17 @@ export class FileIndexStore implements IndexStore {
       // Classify error types for better diagnostics
       if (error.code === 'EACCES' || error.code === 'EPERM') {
         throw new Error(
-          `Permission denied writing cache index to ${this.indexPath}. ` +
-            `Please check directory permissions: ${error.message}`
+          `Permission denied writing cache index to ${this.indexPath}\n\n` +
+            `To fix this, either:\n` +
+            `  1. Use the default cache path (recommended for non-Docker):\n` +
+            `     Remove 'cache-path' input to use the platform default\n\n` +
+            `  2. Fix permissions on your custom path:\n` +
+            `     sudo mkdir -p ${this.cacheDir}\n` +
+            `     sudo chown -R $(whoami) ${this.cacheDir}\n\n` +
+            `  3. Set OPENCACHE_PATH env var on runners:\n` +
+            `     export OPENCACHE_PATH=/path/with/write/access\n\n` +
+            `  4. For Docker: mount a host volume and set cache-path\n` +
+            `     See: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md`
         );
       }
 

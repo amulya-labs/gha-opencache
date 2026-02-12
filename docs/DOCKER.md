@@ -4,6 +4,8 @@
 
 When running GitHub Actions jobs inside Docker containers, you **must** mount the cache directory as a volume from the host to ensure caches are shared across containers.
 
+> **Note**: The default cache path (`~/.cache/gha-opencache`) is inside the container's filesystem and won't persist. For Docker, always use an explicit `cache-path` that's mounted from the host.
+
 ## The Problem
 
 **Each container has an isolated filesystem.** If you save a cache in one container and try to restore it in another container, the cache won't be found unless both containers mount the same host directory.
@@ -16,7 +18,7 @@ jobs:
     runs-on: self-hosted
     container: my-build-image  # ❌ Container 1 - isolated filesystem
     steps:
-      - uses: amulya-labs/gha-opencache@main
+      - uses: amulya-labs/gha-opencache@v2
         with:
           path: target/
           key: build-cache
@@ -27,7 +29,7 @@ jobs:
     runs-on: self-hosted
     container: my-test-image   # ❌ Container 2 - different isolated filesystem
     steps:
-      - uses: amulya-labs/gha-opencache@main
+      - uses: amulya-labs/gha-opencache@v2
         with:
           path: target/
           key: build-cache
@@ -49,12 +51,13 @@ jobs:
     container:
       image: my-build-image
       volumes:
-        - /srv/gha-cache:/srv/gha-cache  # ✅ Mount host directory
+        - /srv/gha-cache:/cache  # ✅ Mount host directory
     steps:
-      - uses: amulya-labs/gha-opencache@main
+      - uses: amulya-labs/gha-opencache@v2
         with:
           path: target/
           key: build-${{ hashFiles('**/Cargo.lock') }}
+          cache-path: /cache  # ✅ Use mounted path
 
   test:
     needs: build
@@ -62,18 +65,20 @@ jobs:
     container:
       image: my-test-image
       volumes:
-        - /srv/gha-cache:/srv/gha-cache  # ✅ Same host directory
+        - /srv/gha-cache:/cache  # ✅ Same host directory
     steps:
-      - uses: amulya-labs/gha-opencache@main
+      - uses: amulya-labs/gha-opencache@v2
         with:
           path: target/
           key: build-${{ hashFiles('**/Cargo.lock') }}
+          cache-path: /cache  # ✅ Use mounted path
 ```
 
 **How it works**:
-- Both containers mount `/srv/gha-cache` from the **host** to `/srv/gha-cache` in the **container**
-- Build saves to `/srv/gha-cache/owner/repo/` (which writes to host)
-- Test reads from `/srv/gha-cache/owner/repo/` (which reads from host)
+- Both containers mount `/srv/gha-cache` from the **host** to `/cache` in the **container**
+- `cache-path: /cache` tells the action to use the mounted directory
+- Build saves to `/cache/owner/repo/` (which writes to host)
+- Test reads from `/cache/owner/repo/` (which reads from host)
 - Caches are shared! ✅
 
 ### Option 2: Custom Cache Path
@@ -81,7 +86,7 @@ jobs:
 If you can't modify container volumes, use a different cache path that's already mounted:
 
 ```yaml
-- uses: amulya-labs/gha-opencache@main
+- uses: amulya-labs/gha-opencache@v2
   with:
     path: target/
     key: build-cache
@@ -102,7 +107,7 @@ container:
 GitHub Actions runner working directory (`${{ runner.workspace }}`) is typically mounted from the host. You can use this:
 
 ```yaml
-- uses: amulya-labs/gha-opencache@main
+- uses: amulya-labs/gha-opencache@v2
   with:
     path: target/
     key: build-cache
@@ -155,17 +160,25 @@ After configuring volumes, verify the setup:
 
 **Symptom**: `Permission denied writing cache index` or similar errors.
 
-**Cause**: Container runs as different user than host directory owner.
+**Cause**: Container runs as different user than host directory owner, or cache path isn't writable.
 
-**Solution**:
+**Solutions**:
+
+1. **Use a user-writable path** (simplest):
+```yaml
+- uses: amulya-labs/gha-opencache@v2
+  with:
+    cache-path: /tmp/gha-cache  # Writable by all users
+```
+
+2. **Fix host directory permissions**:
 ```bash
-# On the host, make cache directory writable
 sudo chown -R 1000:1000 /srv/gha-cache
 # Or make it world-writable (less secure)
 sudo chmod -R 777 /srv/gha-cache
 ```
 
-Or run container as specific user:
+3. **Run container as specific user**:
 ```yaml
 container:
   image: my-image
@@ -182,7 +195,7 @@ container:
 
 **Solution**: Use separate cache directories per runner:
 ```yaml
-- uses: amulya-labs/gha-opencache@main
+- uses: amulya-labs/gha-opencache@v2
   with:
     cache-path: /srv/gha-cache/${{ runner.name }}
 ```
@@ -273,13 +286,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cache cargo registry
-        uses: amulya-labs/gha-opencache@main
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: ~/.cargo/registry
           key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo target
-        uses: amulya-labs/gha-opencache@main
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: target/
           key: cargo-target-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
@@ -298,7 +311,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Restore cargo target
-        uses: amulya-labs/gha-opencache@main
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: target/
           key: cargo-target-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}

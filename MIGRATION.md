@@ -4,7 +4,7 @@ Migration from `actions/cache` and storage backend setup.
 
 ## From actions/cache
 
-**Two steps:** (1) Change `uses: actions/cache@v4` → `amulya-labs/gha-opencache@v1` | (2) Choose storage (see below)
+**Two steps:** (1) Change `uses: actions/cache@v4` → `amulya-labs/gha-opencache@v2` | (2) Choose storage (see below)
 
 All inputs, outputs, and behavior are identical.
 
@@ -29,35 +29,29 @@ max-cache-size-gb: 20
 
 ## Local Filesystem Setup
 
-**Create directory:**
+**Default path (no setup required):**
+- Linux: `$HOME/.cache/gha-opencache`
+- macOS: `~/Library/Caches/gha-opencache`
+- Windows: `%LOCALAPPDATA%\gha-opencache`
 
-Linux/macOS:
-```bash
-sudo mkdir -p /srv/gha-cache
-sudo chown -R runner-user:runner-group /srv/gha-cache
-chmod 755 /srv/gha-cache
-```
+The default path is user-writable and requires no setup.
 
-Windows (PowerShell as Admin):
-```powershell
-New-Item -Path "C:\gha-cache\v1" -ItemType Directory -Force
-```
+**Custom path options:**
 
-**Verify:** `sudo -u runner-user touch /srv/gha-cache/test && rm /srv/gha-cache/test`
+1. **Per-workflow:** Use `cache-path: /mnt/ssd-cache/gha` input
+2. **Per-runner:** Set `OPENCACHE_PATH` environment variable on the runner
 
-**Storage:** `(repos) × (max-cache-size-gb) × 1.2` (e.g., 5 repos × 10 GB × 1.2 = 60 GB)
-
-**Custom path:** Use `cache-path: /mnt/ssd-cache/gha` input
+**Storage planning:** `(repos) × (max-cache-size-gb) × 1.2` (e.g., 5 repos × 10 GB × 1.2 = 60 GB)
 
 <details>
 <summary>Monitoring & Cleanup</summary>
 
 ```bash
 # Monitor disk usage (cron)
-0 */6 * * * df -h /srv/gha-cache | mail -s "Cache" admin@example.com
+0 */6 * * * df -h ~/.cache/gha-opencache | mail -s "Cache" admin@example.com
 
 # Manual cleanup (>7 days, matching default TTL)
-find /srv/gha-cache -type f -mtime +7 -delete
+find ~/.cache/gha-opencache -type f -mtime +7 -delete
 ```
 
 </details>
@@ -68,7 +62,7 @@ find /srv/gha-cache -type f -mtime +7 -delete
 
 **Common workflow config:**
 ```yaml
-- uses: amulya-labs/gha-opencache@v1
+- uses: amulya-labs/gha-opencache@v2
   with:
     storage-provider: s3
     s3-bucket: my-cache-bucket
@@ -171,7 +165,7 @@ gcloud iam service-accounts keys create gha-cache-key.json \
     echo '${{ secrets.GCP_SA_KEY }}' > ${{ runner.temp }}/gcp-key.json
     echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/gcp-key.json" >> $GITHUB_ENV
 
-- uses: amulya-labs/gha-opencache@v1
+- uses: amulya-labs/gha-opencache@v2
   with:
     storage-provider: gcs
     gcs-bucket: my-gha-cache-bucket
@@ -218,7 +212,7 @@ jobs:
         with:
           workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           service_account: github-actions-cache@my-project.iam.gserviceaccount.com
-      - uses: amulya-labs/gha-opencache@v1
+      - uses: amulya-labs/gha-opencache@v2
         with:
           storage-provider: gcs
           gcs-bucket: my-gha-cache-bucket
@@ -231,7 +225,7 @@ jobs:
 **Save:** `key: test-${{ github.run_number }}` **Restore:** `key: test-999, restore-keys: test-`
 
 **Verify storage:**
-- Local: `ls /srv/gha-cache/owner/repo/archives/`
+- Local: `ls ~/.cache/gha-opencache/owner/repo/archives/`
 - S3: `aws s3 ls s3://my-bucket/gha-cache/ --recursive`
 - GCS: `gsutil ls -r gs://my-bucket/gha-cache/`
 

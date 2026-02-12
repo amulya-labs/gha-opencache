@@ -24,7 +24,7 @@ export class LocalStorageBackend implements StorageBackend {
    * @returns Relative path to the archive
    */
   async put(key: string, data: Buffer | Readable): Promise<string> {
-    await io.mkdirP(this.archivesDir);
+    await this.ensureArchivesDir();
 
     // For local storage, we expect the archive to already be created
     // by the tar module with its hash-based naming
@@ -111,7 +111,28 @@ export class LocalStorageBackend implements StorageBackend {
    * Ensure the archives directory exists
    */
   async ensureArchivesDir(): Promise<string> {
-    await io.mkdirP(this.archivesDir);
+    try {
+      await io.mkdirP(this.archivesDir);
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === 'EACCES') {
+        const parentDir = path.dirname(path.dirname(this.archivesDir));
+        throw new Error(
+          `Permission denied creating cache directory: ${this.archivesDir}\n\n` +
+            `To fix this, either:\n` +
+            `  1. Use the default cache path (recommended for non-Docker):\n` +
+            `     Remove 'cache-path' input to use the platform default\n\n` +
+            `  2. Fix permissions on your custom path:\n` +
+            `     sudo mkdir -p ${parentDir}\n` +
+            `     sudo chown -R $(whoami) ${parentDir}\n\n` +
+            `  3. Set OPENCACHE_PATH env var on runners:\n` +
+            `     export OPENCACHE_PATH=/path/with/write/access\n\n` +
+            `  4. For Docker: mount a host volume and set cache-path\n` +
+            `     See: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md`
+        );
+      }
+      throw err;
+    }
     return this.archivesDir;
   }
 
