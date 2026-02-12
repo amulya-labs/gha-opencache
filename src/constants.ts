@@ -46,7 +46,7 @@ export enum State {
   CachePaths = 'CACHE_PATHS',
 }
 
-export const DEFAULT_CACHE_PATH = '/srv/gha-cache/v1';
+export const DEFAULT_CACHE_PATH = '/srv/gha-cache';
 export const INDEX_FILE = 'index.json';
 export const ARCHIVES_DIR = 'archives';
 export const INDEX_VERSION = '2';

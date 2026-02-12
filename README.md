@@ -98,7 +98,7 @@
 | `save-always` | Save cache even if previous steps fail | `false` |
 | **Storage** |||
 | `storage-provider` | Backend: `local`, `s3`, or `gcs` | `local` |
-| `cache-path` | Base path for local cache | `/srv/gha-cache/v1` |
+| `cache-path` | Base path for local cache | `/srv/gha-cache` |
 | **S3** *(when storage-provider: s3)* |||
 | `s3-bucket` | S3 bucket name | *required* |
 | `s3-region` | AWS region | `us-east-1` |
@@ -225,7 +225,7 @@ Designed for reliability with self-healing cache indexes and lock-free archive c
 **Quick fixes:**
 - **Not restoring** → Check key format, verify `restore-keys` prefixes
 - **Docker containers** → Mount cache as volume: see [docs/DOCKER.md](docs/DOCKER.md)
-- **Permission denied** → Create directory: `sudo mkdir -p /srv/gha-cache/v1 && sudo chown -R runner-user:runner-group /srv/gha-cache/v1`
+- **Permission denied** → Create directory: `sudo mkdir -p /srv/gha-cache && sudo chown -R runner-user:runner-group /srv/gha-cache`
 - **S3 auth fails** → Verify secrets, check IAM permissions
 - **Cache too large** → Reduce `max-cache-size-gb` or `ttl-days`
 - **Slow operations** → `compression-level: 1` or `compression: none`
@@ -243,7 +243,7 @@ Debug cache key:
 
 Check local storage:
 ```bash
-ls -la /srv/gha-cache/v1/owner/repo/
+ls -la /srv/gha-cache/owner/repo/
 ```
 
 Verify restore-keys have no trailing slashes or extra characters.
@@ -252,14 +252,14 @@ Verify restore-keys have no trailing slashes or extra characters.
 
 **Problem**: Cache saved in one job but not found in another.
 
-**Cause**: Docker containers have isolated filesystems. Each container sees its own `/srv/gha-cache/v1` unless mounted from host.
+**Cause**: Docker containers have isolated filesystems. Each container sees its own `/srv/gha-cache` unless mounted from host.
 
 **Quick fix**:
 ```yaml
 container:
   image: my-image
   volumes:
-    - /srv/gha-cache/v1:/srv/gha-cache/v1
+    - /srv/gha-cache:/srv/gha-cache
 ```
 
 > **See [docs/DOCKER.md](docs/DOCKER.md)** for complete setup guide (container volumes, Kubernetes, Docker Compose, verification, troubleshooting).
@@ -268,20 +268,20 @@ container:
 
 First, check if the cache directory exists:
 ```bash
-ls -la /srv/gha-cache/v1
+ls -la /srv/gha-cache
 ```
 
 **Directory doesn't exist:**
 ```bash
-sudo mkdir -p /srv/gha-cache/v1
-sudo chown -R runner-user:runner-group /srv/gha-cache/v1
-chmod 755 /srv/gha-cache/v1
+sudo mkdir -p /srv/gha-cache
+sudo chown -R runner-user:runner-group /srv/gha-cache
+chmod 755 /srv/gha-cache
 ```
 
 **Directory exists but wrong permissions:**
 ```bash
-sudo chown -R runner-user:runner-group /srv/gha-cache/v1
-chmod 755 /srv/gha-cache/v1
+sudo chown -R runner-user:runner-group /srv/gha-cache
+chmod 755 /srv/gha-cache
 ```
 
 Replace `runner-user:runner-group` with your actual runner user.
@@ -309,7 +309,7 @@ compression-level: 9    # Increase compression
 
 Manual cleanup:
 ```bash
-find /srv/gha-cache/v1 -type f -mtime +7 -delete
+find /srv/gha-cache -type f -mtime +7 -delete
 ```
 
 ### Slow Cache Operations

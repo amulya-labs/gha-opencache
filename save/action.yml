@@ -23,7 +23,7 @@ inputs:
   cache-path:
     description: 'Base path for local cache storage'
     required: false
-    default: '/srv/gha-cache/v1'
+    default: '/srv/gha-cache'
 
   # S3 provider options
   s3-bucket:
