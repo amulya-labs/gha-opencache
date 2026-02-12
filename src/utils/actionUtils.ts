@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import {
   Inputs,
-  DEFAULT_CACHE_PATH,
+  getDefaultCachePath,
   DEFAULT_COMPRESSION,
   DEFAULT_TTL_DAYS,
   DEFAULT_MAX_CACHE_SIZE_GB,
@@ -272,7 +272,7 @@ export function getInputs(): ActionInputs {
   const lookupOnly = core.getBooleanInput(Inputs.LookupOnly);
   const saveAlways = core.getBooleanInput(Inputs.SaveAlways);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || DEFAULT_CACHE_PATH;
+  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();
@@ -307,7 +307,7 @@ export function getRestoreInputs(): RestoreInputs {
   const failOnCacheMiss = core.getBooleanInput(Inputs.FailOnCacheMiss);
   const lookupOnly = core.getBooleanInput(Inputs.LookupOnly);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || DEFAULT_CACHE_PATH;
+  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
 
@@ -332,7 +332,7 @@ export function getSaveInputs(): SaveInputs {
   const key = core.getInput(Inputs.Key, { required: true });
   const paths = core.getInput(Inputs.Path, { required: true }).split('\n').filter(Boolean);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || DEFAULT_CACHE_PATH;
+  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();

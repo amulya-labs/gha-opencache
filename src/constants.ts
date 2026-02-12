@@ -46,7 +46,37 @@ export enum State {
   CachePaths = 'CACHE_PATHS',
 }
 
-export const DEFAULT_CACHE_PATH = '/srv/gha-cache';
+/**
+ * Get the default cache path based on platform and environment.
+ * Priority: OPENCACHE_PATH env var > platform-specific default
+ */
+export function getDefaultCachePath(): string {
+  // Allow ops teams to override via environment variable
+  const envPath = process.env.OPENCACHE_PATH;
+  if (envPath) {
+    return envPath;
+  }
+
+  // Platform-specific defaults following XDG/platform conventions
+  const platform = process.platform;
+  const home = process.env.HOME || process.env.USERPROFILE || '';
+
+  if (platform === 'win32') {
+    // Windows: %LOCALAPPDATA%\gha-opencache
+    const localAppData = process.env.LOCALAPPDATA || `${home}\\AppData\\Local`;
+    return `${localAppData}\\gha-opencache`;
+  }
+
+  if (platform === 'darwin') {
+    // macOS: ~/Library/Caches/gha-opencache
+    return `${home}/Library/Caches/gha-opencache`;
+  }
+
+  // Linux/Unix: Follow XDG Base Directory spec
+  // $XDG_CACHE_HOME defaults to $HOME/.cache
+  const xdgCacheHome = process.env.XDG_CACHE_HOME || `${home}/.cache`;
+  return `${xdgCacheHome}/gha-opencache`;
+}
 export const INDEX_FILE = 'index.json';
 export const ARCHIVES_DIR = 'archives';
 export const INDEX_VERSION = '2';
