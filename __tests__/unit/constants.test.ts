@@ -86,9 +86,7 @@ describe('getDefaultCachePath', () => {
 
     it('falls back to AppData/Local in home when LOCALAPPDATA not set', () => {
       const home = os.homedir();
-      expect(getDefaultCachePath()).toBe(
-        path.join(home, 'AppData', 'Local', 'gha-opencache')
-      );
+      expect(getDefaultCachePath()).toBe(path.join(home, 'AppData', 'Local', 'gha-opencache'));
     });
   });
 });
