@@ -1,5 +1,5 @@
-name: 'OpenCache'
-description: 'Cache artifacts using local filesystem, S3, or GCS storage - drop-in replacement for actions/cache'
+name: 'OpenCache Action'
+description: 'Fast, configurable drop-in replacement for actions/cache with pluggable backends (local disk, S3-compatible, GCS).'
 author: 'Amulya Labs'
 branding:
   icon: 'archive'
