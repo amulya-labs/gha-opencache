@@ -75,22 +75,22 @@ Fast, configurable drop-in replacement for [`actions/cache`](https://github.com/
 |---------|:-------------:|:---------------:|
 | API compatible | ✅ | ✅ |
 | Self-hosted runners | ⚠️ | ✅ |
-| GitHub-hosted runners | ✅ | ✅* |
+| GitHub-hosted runners | ✅ | ☑️ |
 | Local filesystem backend | ❌ | ✅ |
 | S3-compatible backend | ❌ | ✅ |
 | Google Cloud Storage backend | ❌ | ✅ |
 | Configurable TTL | ❌ | ✅ |
 | Size limits / LRU eviction | ❌ | ✅ |
-| Compression options | ✅ | ✅*** |
+| Compression options | ✔️ | ✅ |
 | Self-healing index | ❌ | ✅ |
 
 **Legend**
 
 * ⚠️ = works, but with limitations
   > cache incurs slow network I/O to and from github-actions server on every run
-* \* = requires S3 or GCS backend
+* ☑️ = requires S3 or GCS backend for Github-hosted runners
   > local disk backend not available on GitHub-hosted runners
-* \*\*\* = `zstd`, `gzip`, or `none` available in **OpenCache Actions**
+* ✔️ = `zstd`, `gzip`, or `none` available in **OpenCache Actions**
   > only `zstd` is available in `actions/cache`
 
 ## Options
