@@ -7,7 +7,8 @@
 
 Fast, configurable drop-in replacement for `actions/cache` with pluggable backends (local disk, S3-compatible, GCS).
 
-> 100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.
+> - 100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.
+> - **Open Cache Actions** gives you full control over where and how your GitHub Actions caches are stored — without changing your workflow.
 
 ## Quick Start
 
@@ -55,7 +56,7 @@ Fast, configurable drop-in replacement for `actions/cache` with pluggable backen
 > [MIGRATION.md](MIGRATION.md) - Setup instructions for all storage backends
 > [examples/](examples/) - Complete workflow examples
 
-## Why *OpenCache Actions*?
+## Why **OpenCache Actions**?
 
 - ⚡ **Blazing fast** — Local storage uses disk I/O only, no network roundtrips
 - 🔌 **Drop-in replacement** — 100% API compatible with `actions/cache`
@@ -84,7 +85,7 @@ Fast, configurable drop-in replacement for `actions/cache` with pluggable backen
 | Cache size limits | ❌ | ✅ |
 | Compression options | `zstd` | `zstd`, `gzip`, none |
 
-\* Requires S3 or GCS backend (local storage not available on GitHub-hosted runners)
+> \* Requires S3 or GCS backend (local storage not available on GitHub-hosted runners)
 
 ⚡ **Local cache = disk I/O speed** | 🔌 **One workflow, any backend** — switch between local/S3/GCS without changing your workflow | 🎛️ **Full control** over TTL, size limits, and compression
 
