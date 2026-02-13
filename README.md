@@ -73,16 +73,18 @@ Fast, configurable drop-in replacement for `actions/cache` with pluggable backen
 
 | Feature | actions/cache | OpenCache Actions |
 |---------|:-------------:|:-------------:|
-| GitHub-hosted runners | ✅ | ❌ |
-| Self-hosted runners | ⚠️ Limited | ✅ |
+| API compatibility | ✅ | ✅ |
+| Self-hosted runners | ⚠️ | ✅ |
+| GitHub-hosted runners | ✅ | ✅* |
 | Local filesystem storage | ❌ | ✅ |
 | S3-compatible storage | ❌ | ✅ |
 | Google Cloud Storage | ❌ | ✅ |
 | MinIO / R2 / Spaces | ❌ | ✅ |
-| API compatibility | — | ✅ 100% |
 | Configurable TTL | ❌ | ✅ |
 | Cache size limits | ❌ | ✅ |
 | Compression options | `zstd` | `zstd`, `gzip`, none |
+
+\* Requires S3 or GCS backend (local storage not available on GitHub-hosted runners)
 
 ⚡ **Local cache = disk I/O speed** | 🔌 **One workflow, any backend** — switch between local/S3/GCS without changing your workflow | 🎛️ **Full control** over TTL, size limits, and compression
 
