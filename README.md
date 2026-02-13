@@ -69,7 +69,7 @@ Fast, configurable drop-in replacement for [`actions/cache`](https://github.com/
 * 🔄 **Restore-key support** — Prefix matching with newest-first selection
 * 💻 **Cross-platform** — Linux, macOS, Windows
 
-### vs [`actions/cache`](https://github.com/actions/cache)
+## vs [`actions/cache`](https://github.com/actions/cache)
 
 | Feature                      | `actions/cache` | OpenCache Actions |
 | ---------------------------- | :-------------: | :---------------: |
