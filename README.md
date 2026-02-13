@@ -7,8 +7,10 @@
 
 Fast, configurable drop-in replacement for `actions/cache` with pluggable backends (local disk, S3-compatible, GCS).
 
-> - 100% API-compatible replacement for `actions/cache` with local filesystem, S3-compatible, and Google Cloud Storage support for self-hosted runners.
-> - **Open Cache Actions** gives you full control over where and how your GitHub Actions caches are stored — without changing your workflow.
+Fast, configurable drop-in replacement for [`actions/cache`](https://github.com/actions/cache) with pluggable backends (local disk, S3-compatible, Google Cloud Storage).
+> **OpenCache Actions** gives you full control over where and how your GitHub Actions caches are stored — without changing your workflow.
+
+---
 
 ## Quick Start
 
@@ -58,36 +60,38 @@ Fast, configurable drop-in replacement for `actions/cache` with pluggable backen
 
 ## Why **OpenCache Actions**?
 
-- ⚡ **Blazing fast** — Local storage uses disk I/O only, no network roundtrips
-- 🔌 **Drop-in replacement** — 100% API compatible with `actions/cache`
-- 🏠 **Local filesystem** — Cache directly on runner disk for maximum speed
-- ☁️ **S3-compatible** — AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces
-- 🌐 **Google Cloud Storage** — Native GCS with Workload Identity support
-- 🔄 **Smart restore-keys** — Prefix matching with newest-first selection
-- 🗜️ **Flexible compression** — zstd, gzip, or none (`actions/cache`: `zstd` only)
-- ⏰ **Configurable TTL** — Auto-expire old caches (`actions/cache`: no control)
-- 📊 **Size limits** — LRU eviction when cache exceeds limits
-- 🛡️ **Self-healing** — Automatic recovery from index corruption
-- 💻 **Cross-platform** — Linux, macOS, Windows
+* 🔌 **Drop-in replacement** — API compatible with `actions/cache`
+* ⚡ **Fast by design** — Local disk backend avoids network round-trips
+* 🔄 **Pluggable storage backends** — Local disk, S3-compatible (AWS S3, MinIO, R2, Spaces), and native Google Cloud Storage
+* 🎛️ **Advanced cache controls** — Configurable TTL, size limits, and LRU eviction
+* 🗜️ **Flexible compression** — `zstd`, `gzip`, or none
+* 🛡️ **Self-healing** — Automatic recovery from index corruption
+* 🔄 **Restore-key support** — Prefix matching with newest-first selection
+* 💻 **Cross-platform** — Linux, macOS, Windows
 
-### vs [actions/cache](https://github.com/actions/cache)
+### vs [`actions/cache`](https://github.com/actions/cache)
 
-| Feature | actions/cache | OpenCache Actions |
-|---------|:-------------:|:-------------:|
-| API compatibility | ✅ | ✅ |
-| Self-hosted runners | ⚠️ | ✅ |
-| GitHub-hosted runners | ✅ | ✅* |
-| Local filesystem storage | ❌ | ✅ |
-| S3-compatible storage | ❌ | ✅ |
-| Google Cloud Storage | ❌ | ✅ |
-| MinIO / R2 / Spaces | ❌ | ✅ |
-| Configurable TTL | ❌ | ✅ |
-| Cache size limits | ❌ | ✅ |
-| Compression options | `zstd` | `zstd`, `gzip`, none |
+| Feature                      | `actions/cache` | OpenCache Actions |
+| ---------------------------- | :-------------: | :---------------: |
+| API compatible               |        ✅        |         ✅         |
+| Self-hosted runners          |        ⚠️       |         ✅         |
+| GitHub-hosted runners        |        ✅        |         ✅*        |
+| Local filesystem backend     |        ❌        |         ✅         |
+| S3-compatible backend        |        ❌        |         ✅         |
+| Google Cloud Storage backend |        ❌        |         ✅         |
+| Configurable TTL             |        ❌        |         ✅         |
+| Size limits / LRU eviction   |        ❌        |         ✅         |
+| Compression options          |        ✅      |       ✅***     |
+| Self-healing index           |        ❌        |         ✅         |
 
-> \* Requires S3 or GCS backend (local storage not available on GitHub-hosted runners)
+**Legend**
 
-⚡ **Local cache = disk I/O speed** | 🔌 **One workflow, any backend** — switch between local/S3/GCS without changing your workflow | 🎛️ **Full control** over TTL, size limits, and compression
+* ⚠️ = works, but with limitations
+  > cache incurs slow network I/O to and from github-actions server on every run
+* \* = requires S3 or GCS backend
+  > local disk backend not available on GitHub-hosted runners
+* \*\*\* = `zstd`, `gzip`, or `none` available in **OpenCache Actions**
+  > only `zstd` is available in `actions/cache`
 
 ## Options
 
