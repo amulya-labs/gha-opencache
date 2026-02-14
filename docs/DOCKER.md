@@ -133,13 +133,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Cache Gradle
         uses: amulya-labs/gha-opencache@v2
         with:
           path: ~/.gradle/caches
           key: gradle-${{ hashFiles('**/*.gradle*') }}
-          cache-path: /mnt/k8s-cache
+          cache-path: /cache  # Must match container mount point
 ```
 
 ## Upgrading from v1 to v2

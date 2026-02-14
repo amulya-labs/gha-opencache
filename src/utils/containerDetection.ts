@@ -98,7 +98,14 @@ export function isPathOnMountedVolume(targetPath: string): 'mounted' | 'not-moun
     // Skip overlay/tmpfs (container's ephemeral filesystem)
     if (mount.fsType === 'overlay' || mount.fsType === 'tmpfs') continue;
 
-    if (normalizedPath.startsWith(mount.mountPoint) && mount.mountPoint.length > bestMatchLength) {
+    // Check if path is under this mount, ensuring we match at path boundaries
+    // to avoid false positives (e.g., /srv shouldn't match /service)
+    const isUnderMount =
+      normalizedPath.startsWith(mount.mountPoint) &&
+      (normalizedPath.length === mount.mountPoint.length ||
+        normalizedPath[mount.mountPoint.length] === '/');
+
+    if (isUnderMount && mount.mountPoint.length > bestMatchLength) {
       bestMatch = mount;
       bestMatchLength = mount.mountPoint.length;
     }
