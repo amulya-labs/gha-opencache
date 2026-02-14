@@ -96,6 +96,9 @@ gh pr list --state merged --base main --limit 10
 **Workflow Structure:**
 All jobs run in parallel except `upload-assets` and `publish-package` which wait for artifact generation. The workflow is consolidated into `.github/workflows/release.yml` for easier maintenance.
 
+**GitHub Packages Publishing:**
+The `publish-package` job modifies `package.json` at publish-time to configure the scoped package name and registry. This is intentional to keep the source `package.json` clean and avoid registry-specific configuration in the repository. The published package metadata will differ from the source repository.
+
 ### Important: Never Create Releases for Major Tags
 
 GitHub Releases protect their associated tags from being updated. Only create releases for semver tags (`v2.0.0`), never for floating major tags (`v2`).
@@ -147,9 +150,13 @@ gh release download vX.Y.Z --pattern "*.intoto.jsonl"
 
 **Verify artifact** (requires [slsa-verifier](https://github.com/slsa-framework/slsa-verifier)):
 ```bash
+# First, identify the provenance file name
+PROVENANCE_FILE=$(ls *.intoto.jsonl)
+
+# Then verify the artifact
 slsa-verifier verify-artifact \
   gha-opencache-vX.Y.Z.tar.gz \
-  --provenance-path *.intoto.jsonl \
+  --provenance-path "$PROVENANCE_FILE" \
   --source-uri github.com/amulya-labs/gha-opencache
 ```
 
