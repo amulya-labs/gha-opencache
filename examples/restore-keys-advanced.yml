@@ -194,7 +194,7 @@ jobs:
       # Calculate current week number
       - name: Get week number
         id: week
-        run: echo "number=$(date +%U)" >> $GITHUB_OUTPUT
+        run: echo "number=$(date +%U)" >> "$GITHUB_OUTPUT"
 
       - name: Cache with weekly rotation
         uses: amulya-labs/gha-opencache@v2
