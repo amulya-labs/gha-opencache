@@ -1,6 +1,11 @@
 name: Python with pip Cache
 # Example: Python pip package caching with multi-level restore-keys
 #
+# This example demonstrates:
+# - Exact match on requirements.txt hash
+# - Multi-level fallback: Python version → OS → any cache
+# - How restore-keys create a graceful degradation chain
+#
 # Storage options:
 # 1. Local filesystem (shown below):
 #    - Requires: self-hosted runners with persistent disk
@@ -16,7 +21,7 @@ name: Python with pip Cache
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
 
 jobs:
@@ -32,14 +37,22 @@ jobs:
           python-version: '3.11'
 
       - name: Cache pip packages
-        uses: amulya-labs/gha-opencache@v1
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: ~/.cache/pip
-          key: pip-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          # Primary key: exact match on requirements.txt
+          key: pip-${{ runner.os }}-py3.11-${{ hashFiles('requirements.txt') }}
+
+          # Multi-level fallback chain (tried in order):
+          # 1. Same Python version, any requirements.txt (most recent)
+          # 2. Same OS, any Python version (most recent)
+          # This allows reusing packages even when dependencies change
           restore-keys: |
-            pip-${{ runner.os }}-py${{ matrix.python-version }}-
+            pip-${{ runner.os }}-py3.11-
             pip-${{ runner.os }}-
-          # storage-provider: local  # Default: uses local filesystem on self-hosted runner
+
+          # Optional: customize cache location (defaults shown)
+          # storage-provider: local  # Default: uses local filesystem
 
       - name: Install dependencies
         run: |

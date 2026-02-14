@@ -1,0 +1,105 @@
+name: TTL and LRU Eviction
+# Example: Automatic cache management with TTL and size limits
+#
+# This example demonstrates:
+# - ttl-days: Automatic expiration of old caches
+# - max-cache-size-gb: LRU eviction when storage limit exceeded
+# - Hands-free cache lifecycle management
+#
+# Use cases:
+# - Compliance: Enforce data retention policies
+# - Cost control: Limit storage usage
+# - Disk management: Prevent runner disk from filling up
+# - Multi-repo runners: Fair allocation across repositories
+#
+# Storage: Local filesystem (best for demonstrating space management)
+# Docs: https://github.com/amulya-labs/gha-opencache#lifecycle
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache with TTL and size limits
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+          # === AUTOMATIC CACHE MANAGEMENT ===
+
+          # TTL: Expire caches after 3 days
+          # - Automatic cleanup of stale caches
+          # - No manual intervention required
+          # - Use 0 for no expiration (default: 7 days)
+          ttl-days: 3
+
+          # LRU Eviction: Keep total cache size under 5 GB per repository
+          # - Oldest caches deleted first when limit exceeded
+          # - Per-repository accounting (fair allocation)
+          # - Use 0 for unlimited (default: 10 GB)
+          max-cache-size-gb: 5
+
+          # Optional: Custom cache location
+          # cache-path: ~/.cache/gha-opencache
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+# === HOW IT WORKS ===
+#
+# TTL (Time To Live):
+# - Each cache entry has an expiresAt timestamp
+# - On cache lookup, expired entries are skipped
+# - Periodic cleanup removes expired entries from disk
+#
+# LRU Eviction:
+# - When saving a cache, total size is calculated
+# - If total > max-cache-size-gb, oldest entries are deleted
+# - Based on last access time (accessedAt field)
+# - Only affects this repository's caches (fair allocation)
+#
+# Combined behavior:
+# - Short TTL (e.g., 1-3 days): Aggressive cleanup, minimal disk usage
+# - Long TTL (e.g., 30 days): More reuse, higher storage cost
+# - Small limit (e.g., 1-5 GB): Tight control, frequent evictions
+# - Large limit (e.g., 50+ GB): More flexibility, less churn
+#
+# === EXAMPLE CONFIGURATIONS ===
+#
+# High-volume CI (many branches):
+#   ttl-days: 1
+#   max-cache-size-gb: 2
+#   # Quick turnover, tight space control
+#
+# Stable production (few changes):
+#   ttl-days: 30
+#   max-cache-size-gb: 20
+#   # Long retention, generous space
+#
+# Compliance (data retention policy):
+#   ttl-days: 90
+#   max-cache-size-gb: 0  # Unlimited
+#   # Enforces 90-day retention, no size limit
+#
+# Shared runner (multiple repos):
+#   ttl-days: 7   # default
+#   max-cache-size-gb: 5  # smaller than default
+#   # Fair allocation across repos
