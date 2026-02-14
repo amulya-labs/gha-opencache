@@ -50,8 +50,6 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.0",
     "@types/proper-lockfile": "^4.1.4",
-    "@typescript-eslint/eslint-plugin": "^8.30.0",
-    "@typescript-eslint/parser": "^8.30.0",
     "@vercel/ncc": "^0.38.4",
     "eslint": "^9.24.0",
     "eslint-config-prettier": "^10.1.0",
@@ -63,6 +61,6 @@
     "typescript-eslint": "^8.55.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.9.0 || >=22.0.0"
   }
 }
