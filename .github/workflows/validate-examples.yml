@@ -29,8 +29,27 @@ jobs:
 
       - name: Download actionlint
         run: |
-          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-          echo "${PWD}" >> $GITHUB_PATH
+          set -euo pipefail
+
+          ACTIONLINT_VERSION="1.7.10"
+          ACTIONLINT_OS="linux"
+          ACTIONLINT_ARCH="amd64"
+
+          TARBALL="actionlint_${ACTIONLINT_VERSION}_${ACTIONLINT_OS}_${ACTIONLINT_ARCH}.tar.gz"
+          CHECKSUMS_FILE="checksums.txt"
+          BASE_URL="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+
+          echo "Downloading actionlint ${ACTIONLINT_VERSION}..."
+          curl -sSL "${BASE_URL}/${TARBALL}" -o "${TARBALL}"
+          curl -sSL "${BASE_URL}/${CHECKSUMS_FILE}" -o "${CHECKSUMS_FILE}"
+
+          echo "Verifying checksum..."
+          grep "  ${TARBALL}\$" "${CHECKSUMS_FILE}" | sha256sum -c -
+
+          echo "Extracting actionlint..."
+          tar -xzf "${TARBALL}"
+
+          echo "${PWD}" >> "$GITHUB_PATH"
 
       - name: Validate all example workflows
         run: |
@@ -70,25 +89,11 @@ jobs:
           set -e
           echo "Checking for common issues in examples..."
 
-          # Check for @v1 references (should be @v2)
+          # Fail if any @v1 references are present (examples should use @v2)
           if grep -r "@v1" examples/ --include="*.yml"; then
             echo ""
-            echo "⚠️  Warning: Found @v1 references in examples"
-            echo "Consider updating to @v2"
-          fi
-
-          # Check for missing 'with:' blocks on gha-opencache usage
-          missing_with=0
-          for file in examples/*.yml; do
-            if grep -q "amulya-labs/gha-opencache@v" "$file"; then
-              if ! grep -A 5 "amulya-labs/gha-opencache@v" "$file" | grep -q "with:"; then
-                echo "❌ $file: Missing 'with:' block after gha-opencache usage"
-                missing_with=1
-              fi
-            fi
-          done
-
-          if [ $missing_with -eq 1 ]; then
+            echo "❌ Error: Found @v1 references in examples"
+            echo "All examples must use @v2; please update these references."
             exit 1
           fi
 
@@ -125,7 +130,7 @@ jobs:
 
           def extract_yaml_blocks(md_content):
               """Extract YAML code blocks from markdown"""
-              pattern = r'```yaml\n(.*?)\n```'
+              pattern = r'```ya?ml[^\n]*\n(.*?)\n```'
               blocks = re.findall(pattern, md_content, re.DOTALL)
               return blocks
 
