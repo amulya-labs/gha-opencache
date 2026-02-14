@@ -170,6 +170,7 @@ jobs:
 
   s3-integration:
     name: S3 Integration Tests
+    needs: [validate]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
