@@ -168,6 +168,69 @@ jobs:
 
           python3 /tmp/validate_md_yaml.py
 
+  s3-integration:
+    name: S3 Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Start MinIO
+        run: |
+          docker run -d --rm \
+            --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            quay.io/minio/minio:latest \
+            server /data
+
+          # Wait for MinIO to be ready
+          echo "Waiting for MinIO to start..."
+          minio_ready=0
+          for i in {1..30}; do
+            if curl -sf http://localhost:9000/minio/health/live; then
+              echo "MinIO is ready"
+              minio_ready=1
+              break
+            fi
+            echo "Attempt $i: MinIO not ready yet..."
+            sleep 1
+          done
+
+          if [ "$minio_ready" -ne 1 ]; then
+            echo "ERROR: MinIO failed to become ready after 30 attempts. Exiting workflow."
+            docker logs minio || true
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run S3 Integration Tests
+        run: npm run test:s3
+        env:
+          MINIO_ENDPOINT: http://localhost:9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+
+      - name: Show MinIO logs on failure
+        if: failure()
+        run: docker logs minio || true
+
+      - name: Stop MinIO
+        if: always()
+        run: docker stop minio || true
+
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -345,13 +408,14 @@ jobs:
 
   ci-success:
     name: CI Success
-    needs: [validate, build, test-action]
+    needs: [validate, s3-integration, build, test-action]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check all jobs status
         run: |
           echo "Validate: ${{ needs.validate.result }}"
+          echo "S3 Integration: ${{ needs.s3-integration.result }}"
           echo "Build: ${{ needs.build.result }}"
           echo "Test action: ${{ needs.test-action.result }}"
 
@@ -361,6 +425,13 @@ jobs:
             exit 1
           fi
           echo "✅ Validation passed"
+
+          # S3 Integration must succeed
+          if [ "${{ needs.s3-integration.result }}" == "failure" ] || [ "${{ needs.s3-integration.result }}" == "cancelled" ]; then
+            echo "❌ S3 Integration tests failed or was cancelled"
+            exit 1
+          fi
+          echo "✅ S3 Integration tests passed"
 
           # Build must succeed
           if [ "${{ needs.build.result }}" == "failure" ] || [ "${{ needs.build.result }}" == "cancelled" ]; then
