@@ -205,11 +205,9 @@ jobs:
 
           # Fallback:
           # 1. Current week, any lockfile
-          # 2. Previous week (if we're early in current week)
-          # 3. Any week
+          # 2. Any week (graceful degradation)
           restore-keys: |
             npm-week${{ steps.week.outputs.number }}-
-            npm-week${{ steps.week.outputs.number - 1 }}-
             npm-week
 
       - name: Install dependencies
