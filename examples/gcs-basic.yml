@@ -39,7 +39,9 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/gcp-key.json" >> $GITHUB_ENV
 
       # Cache node_modules using GCS
-      - uses: amulya-labs/gha-opencache@v1
+      - name: Cache npm dependencies
+        id: cache
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}

@@ -1,0 +1,105 @@
+name: Validate Examples
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/**/*.yml'
+      - '.github/workflows/validate-examples.yml'
+  pull_request:
+    paths:
+      - 'examples/**/*.yml'
+      - '.github/workflows/validate-examples.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Example Workflows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download actionlint
+        run: |
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          echo "${PWD}" >> $GITHUB_PATH
+
+      - name: Validate all example workflows
+        run: |
+          set -e
+          echo "Validating example workflows..."
+
+          # Find all YAML files in examples/
+          example_count=0
+          error_count=0
+
+          for file in examples/*.yml; do
+            echo ""
+            echo "=== Validating: $file ==="
+            example_count=$((example_count + 1))
+
+            if actionlint "$file"; then
+              echo "✅ $file is valid"
+            else
+              echo "❌ $file has errors"
+              error_count=$((error_count + 1))
+            fi
+          done
+
+          echo ""
+          echo "======================================"
+          echo "Validated $example_count example files"
+
+          if [ $error_count -gt 0 ]; then
+            echo "❌ $error_count file(s) with errors"
+            exit 1
+          else
+            echo "✅ All examples are valid!"
+          fi
+
+      - name: Check for common issues
+        run: |
+          set -e
+          echo "Checking for common issues in examples..."
+
+          # Check for @v1 references (should be @v2)
+          if grep -r "@v1" examples/ --include="*.yml"; then
+            echo ""
+            echo "⚠️  Warning: Found @v1 references in examples"
+            echo "Consider updating to @v2"
+          fi
+
+          # Check for missing 'with:' blocks on gha-opencache usage
+          missing_with=0
+          for file in examples/*.yml; do
+            if grep -q "amulya-labs/gha-opencache@v" "$file"; then
+              if ! grep -A 5 "amulya-labs/gha-opencache@v" "$file" | grep -q "with:"; then
+                echo "❌ $file: Missing 'with:' block after gha-opencache usage"
+                missing_with=1
+              fi
+            fi
+          done
+
+          if [ $missing_with -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "✅ No common issues found"
+
+      - name: Validate example consistency
+        run: |
+          echo "Checking example consistency..."
+
+          # All examples should have a name
+          for file in examples/*.yml; do
+            if ! grep -q "^name:" "$file"; then
+              echo "❌ $file: Missing 'name:' field"
+              exit 1
+            fi
+          done
+
+          echo "✅ All examples have required fields"
