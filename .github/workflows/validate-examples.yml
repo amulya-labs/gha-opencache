@@ -170,9 +170,9 @@ jobs:
           print(f"\n{'='*50}")
           print(f"Total YAML blocks validated: {total_blocks}")
           if error_count > 0:
-              print(f"⚠️  {error_count} block(s) with YAML syntax errors")
-              print(f"Note: Markdown may contain intentional code snippets (not complete workflows)")
-              print(f"✅ Validation complete (errors are warnings only)")
+              print(f"❌ {error_count} block(s) with YAML syntax errors")
+              print(f"Note: Single-line snippets are skipped automatically")
+              sys.exit(1)
           else:
               print(f"✅ All YAML blocks have valid syntax")
           PYTHON_SCRIPT
