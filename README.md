@@ -288,13 +288,17 @@ Verify restore-keys have no trailing slashes or extra characters.
 
 **Quick fix** (set explicit cache path and mount it):
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
-  with:
-    cache-path: /cache
-container:
-  image: my-image
-  volumes:
-    - /srv/gha-cache:/cache
+jobs:
+  build:
+    runs-on: self-hosted
+    container:
+      image: my-image
+      volumes:
+        - /srv/gha-cache:/cache
+    steps:
+      - uses: amulya-labs/gha-opencache@v2
+        with:
+          cache-path: /cache
 ```
 
 > **See [docs/DOCKER.md](docs/DOCKER.md)** for complete setup guide (container volumes, Kubernetes, Docker Compose, verification, troubleshooting).
