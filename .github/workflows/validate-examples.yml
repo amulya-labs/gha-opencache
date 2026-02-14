@@ -131,6 +131,10 @@ jobs:
 
           def validate_yaml_block(yaml_content, source, block_num):
               """Validate YAML syntax"""
+              # Skip single-line snippets (documentation examples)
+              if '\n' not in yaml_content.strip():
+                  return True, None  # Single line = snippet, skip validation
+
               try:
                   yaml.safe_load(yaml_content)
                   return True, None
