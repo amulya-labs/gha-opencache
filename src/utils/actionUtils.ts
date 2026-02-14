@@ -49,6 +49,7 @@ export interface ActionInputs {
   saveAlways: boolean;
   storageProvider: StorageProviderType;
   cachePath: string;
+  isExplicitCachePath: boolean;
   s3: S3Inputs;
   gcs: GCSInputs;
   compression: CompressionOptions;
@@ -65,6 +66,7 @@ export type RestoreInputs = Pick<
   | 'lookupOnly'
   | 'storageProvider'
   | 'cachePath'
+  | 'isExplicitCachePath'
   | 's3'
   | 'gcs'
 >;
@@ -75,6 +77,7 @@ export type SaveInputs = Pick<
   | 'paths'
   | 'storageProvider'
   | 'cachePath'
+  | 'isExplicitCachePath'
   | 's3'
   | 'gcs'
   | 'compression'
@@ -272,7 +275,9 @@ export function getInputs(): ActionInputs {
   const lookupOnly = core.getBooleanInput(Inputs.LookupOnly);
   const saveAlways = core.getBooleanInput(Inputs.SaveAlways);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
+  const cachePathInput = core.getInput(Inputs.CachePath);
+  const isExplicitCachePath = !!cachePathInput;
+  const cachePath = cachePathInput || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();
@@ -292,6 +297,7 @@ export function getInputs(): ActionInputs {
     saveAlways,
     storageProvider,
     cachePath,
+    isExplicitCachePath,
     s3,
     gcs,
     compression,
@@ -307,7 +313,9 @@ export function getRestoreInputs(): RestoreInputs {
   const failOnCacheMiss = core.getBooleanInput(Inputs.FailOnCacheMiss);
   const lookupOnly = core.getBooleanInput(Inputs.LookupOnly);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
+  const cachePathInput = core.getInput(Inputs.CachePath);
+  const isExplicitCachePath = !!cachePathInput;
+  const cachePath = cachePathInput || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
 
@@ -323,6 +331,7 @@ export function getRestoreInputs(): RestoreInputs {
     lookupOnly,
     storageProvider,
     cachePath,
+    isExplicitCachePath,
     s3,
     gcs,
   };
@@ -332,7 +341,9 @@ export function getSaveInputs(): SaveInputs {
   const key = core.getInput(Inputs.Key, { required: true });
   const paths = core.getInput(Inputs.Path, { required: true }).split('\n').filter(Boolean);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
+  const cachePathInput = core.getInput(Inputs.CachePath);
+  const isExplicitCachePath = !!cachePathInput;
+  const cachePath = cachePathInput || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();
@@ -343,7 +354,18 @@ export function getSaveInputs(): SaveInputs {
   validateS3Inputs(storageProvider, s3);
   validateGCSInputs(storageProvider, gcs);
 
-  return { key, paths, storageProvider, cachePath, s3, gcs, compression, ttlDays, maxCacheSizeGb };
+  return {
+    key,
+    paths,
+    storageProvider,
+    cachePath,
+    isExplicitCachePath,
+    s3,
+    gcs,
+    compression,
+    ttlDays,
+    maxCacheSizeGb,
+  };
 }
 
 export function getRepoInfo(): { owner: string; repo: string } {
