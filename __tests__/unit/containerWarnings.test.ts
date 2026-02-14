@@ -149,7 +149,7 @@ describe('containerWarnings', () => {
         expect(warningMessage).toContain('using default cache path');
         expect(warningMessage).toContain('/github/home/.cache/gha-opencache');
         expect(warningMessage).toContain('❌');
-        expect(warningMessage).toContain('Default path is NOT mounted');
+        expect(warningMessage).toContain('does NOT appear to be mounted as a volume');
         expect(warningMessage).toContain('Upgrading from v1');
         expect(warningMessage).toContain('add an explicit cache-path');
         expect(warningMessage).toContain('cache-path: /srv/gha-cache');
@@ -202,6 +202,42 @@ describe('containerWarnings', () => {
         expect(warningMessage).toContain(
           'https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md'
         );
+      });
+
+      it('uses info level when default path is mounted', () => {
+        const inputs = createMockInputs({
+          cachePath: '/github/home/.cache/gha-opencache',
+          isExplicitCachePath: false,
+        });
+        mockContainerDetection.isRunningInContainer.mockReturnValue(true);
+        mockContainerDetection.isPathOnMountedVolume.mockReturnValue('mounted');
+
+        maybeWarnContainerConfig(inputs);
+
+        expect(mockCore.warning).not.toHaveBeenCalled();
+        expect(mockCore.info).toHaveBeenCalledTimes(1);
+        const infoMessage = mockCore.info.mock.calls[0][0];
+        expect(infoMessage).toContain('✅');
+        expect(infoMessage).toContain('appears to be mounted as a volume');
+        expect(infoMessage).toContain('for clarity and portability');
+      });
+
+      it('uses notice level when default path mount status is unknown', () => {
+        const inputs = createMockInputs({
+          cachePath: '/github/home/.cache/gha-opencache',
+          isExplicitCachePath: false,
+        });
+        mockContainerDetection.isRunningInContainer.mockReturnValue(true);
+        mockContainerDetection.isPathOnMountedVolume.mockReturnValue('unknown');
+
+        maybeWarnContainerConfig(inputs);
+
+        expect(mockCore.warning).not.toHaveBeenCalled();
+        expect(mockCore.notice).toHaveBeenCalledTimes(1);
+        const noticeMessage = mockCore.notice.mock.calls[0][0];
+        expect(noticeMessage).toContain('⚠️');
+        expect(noticeMessage).toContain('Unable to determine');
+        expect(noticeMessage).toContain('Please verify your volume mounts');
       });
     });
 

@@ -233,5 +233,27 @@ describe('containerDetection', () => {
 
       expect(isPathOnMountedVolume('/sys/fs/cgroup')).toBe('mounted');
     });
+
+    it('handles root mount point (/) correctly', () => {
+      const mountinfo =
+        '574 573 8:1 / / rw - ext4 /dev/sda1 rw\n' + '575 574 0:85 / /srv rw - bind /srv rw\n';
+      mockFs.readFileSync.mockReturnValue(mountinfo);
+
+      // Path under root mount but not under /srv should match root
+      expect(isPathOnMountedVolume('/home/user/cache')).toBe('mounted');
+      // Path under /srv should match the more specific mount
+      expect(isPathOnMountedVolume('/srv/cache')).toBe('mounted');
+    });
+
+    it('returns not-mounted for paths under root when root is overlay', () => {
+      const mountinfo =
+        '574 573 0:84 / / rw - overlay overlay rw\n' + '575 574 0:85 / /srv rw - bind /srv rw\n';
+      mockFs.readFileSync.mockReturnValue(mountinfo);
+
+      // Path under overlay root should be not-mounted
+      expect(isPathOnMountedVolume('/home/user/cache')).toBe('not-mounted');
+      // Path under /srv bind mount should still be mounted
+      expect(isPathOnMountedVolume('/srv/cache')).toBe('mounted');
+    });
   });
 });
