@@ -41,14 +41,23 @@ gh release create v${NEW_VERSION} --generate-notes --title "v${NEW_VERSION}"
 gh release view v${NEW_VERSION}
 ```
 
-The floating major tag (e.g., `v2`) is updated automatically by GitHub Actions.
+## What Happens Automatically
 
-**Release Assets:** The release workflow automatically generates and attaches:
-- Source tarball with checksums
-- Dist bundle (compiled action code)
-- **SLSA provenance** (*.intoto.jsonl) - cryptographic attestation for supply chain security
+When you create a release, the **release workflow** runs 5 parallel jobs:
 
-These signed artifacts provide a **10/10 OpenSSF Scorecard "Signed-Releases" score**.
+1. **build-artifacts** - Compiles and packages the action
+2. **provenance** - Generates SLSA Level 3 attestation
+3. **upload-assets** - Attaches signed artifacts to release
+4. **publish-package** - Publishes to GitHub Packages (npm)
+5. **update-major-tag** - Updates floating tag (e.g., `v2` → `v2.2.3`)
+
+**Generated Artifacts:**
+- Source tarball (`gha-opencache-vX.Y.Z.tar.gz`)
+- Dist bundle (`gha-opencache-vX.Y.Z-dist.tar.gz`)
+- SHA256 checksums (`checksums.txt`)
+- **SLSA provenance** (`*.intoto.jsonl`) - 10/10 OpenSSF score
+
+Users referencing `@v2` automatically get the latest compatible version. The entire release process completes in ~2-3 minutes.
 
 ## Versioning
 
@@ -77,21 +86,15 @@ gh pr list --state merged --base main --limit 10
 ### Setup Requirements
 
 **Required Secrets:**
-- `PUBLIC_REPO_WRITE_PAT`: Fine-grained PAT with **Repository permissions > Contents: Read and write** to update floating major tags
+- `PUBLIC_REPO_WRITE_PAT`: Fine-grained PAT with **Repository permissions > Contents: Read and write** (for updating floating major tags)
 
-**Workflow Permissions:**
-- The release workflow requires `id-token: write` permission for SLSA provenance generation (already configured)
-- GitHub automatically provides this for releases
+**Workflow Permissions** (configured automatically):
+- `id-token: write` - SLSA provenance generation
+- `contents: write` - Upload assets and update tags
+- `packages: write` - Publish to GitHub Packages
 
-**What Happens Automatically:**
-When you create a release (via `gh release create`), the release workflow:
-1. Builds the action and packages dist files
-2. Creates source tarball and dist bundle
-3. Generates SHA256 checksums
-4. Creates **SLSA Level 3 provenance** (*.intoto.jsonl)
-5. Uploads all artifacts to the release
-
-This ensures every release has cryptographically signed artifacts for supply chain security.
+**Workflow Structure:**
+All jobs run in parallel except `upload-assets` and `publish-package` which wait for artifact generation. The workflow is consolidated into `.github/workflows/release.yml` for easier maintenance.
 
 ### Important: Never Create Releases for Major Tags
 
