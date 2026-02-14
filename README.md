@@ -223,32 +223,16 @@ Designed for reliability with self-healing cache indexes and lock-free archive c
 
 ## Examples
 
-[`examples/`](examples/) - Complete workflow examples:
-
-### Common Use Cases
-Start here for typical workflows with popular languages:
-- **[Node.js](examples/node-basic.yml)** - npm dependencies with restore-keys fallback
-- **[Python](examples/python-pip.yml)** - pip packages with multi-level fallback
-- **[Go](examples/go-modules.yml)** - modules + build artifacts (multiple caches)
-- **[Rust](examples/rust-cargo.yml)** - Cargo registry and incremental builds
-
-### Feature-Specific Examples
-Showcase distinguishing features:
-- **[restore-keys Advanced](examples/restore-keys-advanced.yml)** ⭐ - Branch fallback, monorepos, dependency updates
-- **[TTL & Eviction](examples/ttl-and-eviction.yml)** - Automatic cache lifecycle management
-- **[Save Always](examples/save-always.yml)** - Preserve partial results on failure (incremental builds)
-- **[Fail on Miss](examples/fail-on-cache-miss.yml)** - Enforce strict cache requirements (production)
-- **[Lookup Only](examples/lookup-only.yml)** - Check cache without downloading (conditional workflows)
-- **[Docker Containers](examples/docker-containers.yml)** - Volume mounts and container workflows
-- **[Compression Tuning](examples/compression-tuning.yml)** - Speed vs size optimization
-
-### Storage Backends
-Cloud storage and S3-compatible options:
-- **[MinIO](examples/s3-minio.yml)** - Self-hosted S3-compatible storage
-- **[Cloudflare R2](examples/s3-cloudflare-r2.yml)** - Zero-egress S3 storage
-- **[Google Cloud Storage](examples/gcs-basic.yml)** - GCS with service account
-- **[GCS Workload Identity](examples/gcs-workload-identity.yml)** - Keyless authentication
-- **[Multi-cache](examples/multi-cache.yml)** - Multiple independent caches
+> **📚 [Browse all examples →](examples/)**
+>
+> 16+ complete, production-ready workflow examples organized by category:
+> - **Getting Started** - Node.js basic with detailed inline comments
+> - **Storage Backends** - S3/MinIO, Cloudflare R2, Google Cloud Storage
+> - **Advanced Features** - Multi-cache, restore-keys patterns, TTL/eviction, compression
+> - **Language-Specific** - Python, Go, Rust with best practices
+> - **Docker & Containers** - Volume mounts and container workflows
+>
+> Each example includes comprehensive documentation, real-world patterns, and troubleshooting guidance.
 
 ## Troubleshooting
 

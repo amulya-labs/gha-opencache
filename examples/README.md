@@ -1,5 +1,7 @@
 # OpenCache Actions Examples
 
+[← Back to Main README](../README.md)
+
 This directory contains comprehensive workflow examples demonstrating various use cases and configurations for `gha-opencache`. Each example is a complete, runnable workflow that you can adapt for your projects.
 
 ## 📚 Table of Contents
@@ -201,7 +203,7 @@ Special configurations for containerized workflows.
 
 **Best for:** Any workflow using Docker containers, Kubernetes runners
 
-**⚠️ Important:** Containers require explicit `cache-path` and volume mount configuration. This example includes detailed documentation on avoiding common pitfalls.
+**⚠️ Important:** Containers require explicit `cache-path` and volume mount configuration. See **[docs/DOCKER.md](../docs/DOCKER.md)** for comprehensive container usage guide and troubleshooting.
 
 ---
 
@@ -215,8 +217,10 @@ Special configurations for containerized workflows.
 ## 📖 Additional Resources
 
 - [Main README](../README.md) - Project overview and API reference
-- [MIGRATION.md](../MIGRATION.md) - Detailed setup instructions for storage backends
-- [CONTRIBUTING.md](../CONTRIBUTING.md) - How to contribute to the project
+- [MIGRATION.md](../MIGRATION.md) - Storage backend setup and migration from actions/cache
+- [docs/DOCKER.md](../docs/DOCKER.md) - Docker container usage guide
+- [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) - System design and implementation
+- [CONTRIBUTING.md](../CONTRIBUTING.md) - How to contribute
 
 ## 💡 Tips
 
