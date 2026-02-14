@@ -121,7 +121,7 @@ export class GCSLockManager implements LockManager {
         retries++;
         await this.sleep(delay);
         delay = Math.min(delay * 2, MAX_RETRY_DELAY_MS);
-      } catch (err) {
+      } catch (_err) {
         // Handle transient errors
         retries++;
         await this.sleep(delay);
