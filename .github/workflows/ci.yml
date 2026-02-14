@@ -170,7 +170,6 @@ jobs:
 
   s3-integration:
     name: S3 Integration Tests
-    needs: [validate]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -233,6 +232,7 @@ jobs:
         run: docker stop minio || true
 
   build:
+    needs: [validate]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -295,7 +295,7 @@ jobs:
           echo "All dist files present"
 
   test-action:
-    needs: build
+    needs: [s3-integration]
     strategy:
       fail-fast: false
       matrix:
