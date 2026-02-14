@@ -215,7 +215,9 @@ describe('manifestStore', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.unlinkSync.mockImplementation(() => {});
 
-      await expect(writeManifest(archivePath, manifest)).rejects.toThrow(/Failed to write manifest/);
+      await expect(writeManifest(archivePath, manifest)).rejects.toThrow(
+        /Failed to write manifest/
+      );
 
       expect(mockFs.unlinkSync).toHaveBeenCalled();
     });
@@ -229,7 +231,9 @@ describe('manifestStore', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.unlinkSync.mockImplementation(() => {});
 
-      await expect(writeManifest(archivePath, manifest)).rejects.toThrow(/Failed to write manifest/);
+      await expect(writeManifest(archivePath, manifest)).rejects.toThrow(
+        /Failed to write manifest/
+      );
 
       expect(mockFs.unlinkSync).toHaveBeenCalled();
     });
@@ -244,7 +248,9 @@ describe('manifestStore', () => {
         throw new Error('Cleanup failed');
       });
 
-      await expect(writeManifest(archivePath, manifest)).rejects.toThrow(/Failed to write manifest/);
+      await expect(writeManifest(archivePath, manifest)).rejects.toThrow(
+        /Failed to write manifest/
+      );
       await expect(writeManifest(archivePath, manifest)).rejects.toThrow(/Write failed/);
     });
 
@@ -297,7 +303,9 @@ describe('manifestStore', () => {
       const result = await readManifest(archivePath);
 
       expect(result).toBeUndefined();
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Failed to read manifest'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to read manifest')
+      );
     });
 
     it('returns undefined and warns on missing version field', async () => {
@@ -317,8 +325,12 @@ describe('manifestStore', () => {
       const result = await readManifest(archivePath);
 
       expect(result).toBeUndefined();
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Invalid manifest format'));
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Missing fields: version'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid manifest format')
+      );
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Missing fields: version')
+      );
     });
 
     it('returns undefined and warns on missing key field', async () => {
@@ -358,7 +370,9 @@ describe('manifestStore', () => {
       const result = await readManifest(archivePath);
 
       expect(result).toBeUndefined();
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Missing fields: archiveFilename'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Missing fields: archiveFilename')
+      );
     });
 
     it('returns undefined and warns on multiple missing fields', async () => {
@@ -393,7 +407,9 @@ describe('manifestStore', () => {
       const result = await readManifest(archivePath);
 
       expect(result).toBeUndefined();
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Incompatible manifest version: 99'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Incompatible manifest version: 99')
+      );
       expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('expected: 2'));
     });
 
@@ -441,7 +457,9 @@ describe('manifestStore', () => {
 
       await deleteManifest(archivePath);
 
-      expect(mockCore.debug).toHaveBeenCalledWith(expect.stringContaining('Failed to delete manifest'));
+      expect(mockCore.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to delete manifest')
+      );
     });
 
     it('uses correct manifest path', async () => {

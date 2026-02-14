@@ -248,7 +248,9 @@ describe('LocalStorageBackend', () => {
       error.code = 'EACCES';
       mockIo.mkdirP.mockRejectedValue(error);
 
-      await expect(backend.ensureArchivesDir()).rejects.toThrow(/Permission denied creating cache directory/);
+      await expect(backend.ensureArchivesDir()).rejects.toThrow(
+        /Permission denied creating cache directory/
+      );
       await expect(backend.ensureArchivesDir()).rejects.toThrow(/Use the default cache path/);
       await expect(backend.ensureArchivesDir()).rejects.toThrow(/For Docker: mount a host volume/);
     });

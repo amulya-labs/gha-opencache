@@ -285,7 +285,9 @@ describe('actionUtils', () => {
       const inputs = getInputs();
 
       expect(inputs.compression.method).toBe('auto');
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Invalid compression method'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid compression method')
+      );
     });
 
     it('should warn on invalid compression level', () => {
@@ -299,7 +301,9 @@ describe('actionUtils', () => {
       const inputs = getInputs();
 
       expect(inputs.compression.level).toBeUndefined();
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Invalid compression level'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid compression level')
+      );
     });
 
     it('should parse TTL days', () => {
@@ -379,7 +383,9 @@ describe('actionUtils', () => {
       const inputs = getInputs();
 
       expect(inputs.maxCacheSizeGb).toBe(DEFAULT_MAX_CACHE_SIZE_GB);
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Invalid max-cache-size-gb'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid max-cache-size-gb')
+      );
     });
 
     it('should warn on negative max cache size', () => {
@@ -393,7 +399,9 @@ describe('actionUtils', () => {
       const inputs = getInputs();
 
       expect(inputs.maxCacheSizeGb).toBe(DEFAULT_MAX_CACHE_SIZE_GB);
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Invalid max-cache-size-gb'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid max-cache-size-gb')
+      );
     });
 
     it('should throw when S3 provider selected but bucket not specified', () => {
@@ -429,7 +437,9 @@ describe('actionUtils', () => {
       const inputs = getInputs();
 
       expect(inputs.storageProvider).toBe('local');
-      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Invalid storage-provider'));
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid storage-provider')
+      );
     });
   });
 

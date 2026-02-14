@@ -30,9 +30,14 @@ const mockIo = io as jest.Mocked<typeof io>;
 const mockCore = core as jest.Mocked<typeof core>;
 
 // Import mocked functions for type-safe access
-import { shouldRebuildIndex, rebuildIndexFromManifests } from '../../../src/storage/local/indexRebuilder';
+import {
+  shouldRebuildIndex,
+  rebuildIndexFromManifests,
+} from '../../../src/storage/local/indexRebuilder';
 const mockShouldRebuildIndex = shouldRebuildIndex as jest.MockedFunction<typeof shouldRebuildIndex>;
-const mockRebuildIndexFromManifests = rebuildIndexFromManifests as jest.MockedFunction<typeof rebuildIndexFromManifests>;
+const mockRebuildIndexFromManifests = rebuildIndexFromManifests as jest.MockedFunction<
+  typeof rebuildIndexFromManifests
+>;
 
 describe('FileIndexStore', () => {
   const cacheDir = '/test/cache';
@@ -225,9 +230,7 @@ describe('FileIndexStore', () => {
       const result = await store.load();
 
       expect(result).toEqual(rebuiltIndex);
-      expect(mockCore.warning).toHaveBeenCalledWith(
-        expect.stringContaining('Cache index at')
-      );
+      expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Cache index at'));
       expect(mockCore.warning).toHaveBeenCalledWith(
         expect.stringContaining('is corrupted (invalid JSON)')
       );

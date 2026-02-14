@@ -1,5 +1,8 @@
 import * as path from 'path';
-import { LocalStorageProvider, createLocalStorageProvider } from '../../../src/storage/local/localProvider';
+import {
+  LocalStorageProvider,
+  createLocalStorageProvider,
+} from '../../../src/storage/local/localProvider';
 import { CacheEntry } from '../../../src/keyResolver/indexManager';
 
 // Mock dependencies before importing them
@@ -238,7 +241,9 @@ describe('LocalStorageProvider', () => {
 
       const provider = createLocalStorageProvider('/cache', 'owner', 'repo');
 
-      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow('Failed to rename archive');
+      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow(
+        'Failed to rename archive'
+      );
 
       expect(mockFs.unlinkSync).toHaveBeenCalled();
     });
@@ -263,7 +268,9 @@ describe('LocalStorageProvider', () => {
 
       const provider = createLocalStorageProvider('/cache', 'owner', 'repo');
 
-      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow('Failed to rename archive');
+      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow(
+        'Failed to rename archive'
+      );
     });
 
     it('rolls back on index save error', async () => {
@@ -288,7 +295,9 @@ describe('LocalStorageProvider', () => {
 
       const provider = createLocalStorageProvider('/cache', 'owner', 'repo');
 
-      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow('Index save failed');
+      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow(
+        'Index save failed'
+      );
 
       // Should clean up finalized archive and manifest
       expect(mockFs.unlinkSync).toHaveBeenCalled();
@@ -318,7 +327,9 @@ describe('LocalStorageProvider', () => {
 
       const provider = createLocalStorageProvider('/cache', 'owner', 'repo');
 
-      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow('Manifest write failed');
+      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow(
+        'Manifest write failed'
+      );
 
       // Should clean up finalized archive
       expect(mockFs.unlinkSync).toHaveBeenCalled();
@@ -348,7 +359,9 @@ describe('LocalStorageProvider', () => {
 
       const provider = createLocalStorageProvider('/cache', 'owner', 'repo');
 
-      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow('Index save failed');
+      await expect(provider.save('test-key', ['/path/to/file'])).rejects.toThrow(
+        'Index save failed'
+      );
     });
 
     it('deletes evicted entries after save', async () => {
