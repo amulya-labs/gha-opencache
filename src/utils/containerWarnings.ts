@@ -75,21 +75,40 @@ export function maybeWarnContainerConfig(inputs: RestoreInputs): void {
     }
   } else {
     // User is using default path (common v1→v2 upgrade issue)
-    core.warning(
+    let message =
       `Cache miss in container using default cache path: ${inputs.cachePath}\n\n` +
-        `❌ Default path is NOT mounted (detected: ${mountStatus})\n\n` +
-        'Container filesystems are isolated - the default cache path is inside\n' +
-        'the container and will not persist between jobs. Common causes:\n' +
-        '- Upgrading from v1 (which used /srv/gha-cache by default)\n' +
-        '- No cache-path input specified\n\n' +
-        'To fix, add an explicit cache-path with a mounted volume:\n\n' +
-        '  - uses: amulya-labs/gha-opencache@v2\n' +
-        '    with:\n' +
-        '      cache-path: /srv/gha-cache  # or your preferred path\n\n' +
-        '  container:\n' +
-        '    volumes:\n' +
-        '      - /srv/gha-cache:/srv/gha-cache\n\n' +
-        'See: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md'
-    );
+      'Container filesystems are isolated - the default cache path is inside\n' +
+      'the container and will not persist between jobs. Common causes:\n' +
+      '- Upgrading from v1 (which used /srv/gha-cache by default)\n' +
+      '- No cache-path input specified\n\n' +
+      'To fix, add an explicit cache-path with a mounted volume:\n\n' +
+      '  - uses: amulya-labs/gha-opencache@v2\n' +
+      '    with:\n' +
+      '      cache-path: /srv/gha-cache  # or your preferred path\n\n' +
+      '  container:\n' +
+      '    volumes:\n' +
+      '      - /srv/gha-cache:/srv/gha-cache\n\n' +
+      'See: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md';
+
+    // Prepend status-specific information and choose appropriate severity
+    if (mountStatus === 'not-mounted') {
+      message =
+        `❌ Default cache path does NOT appear to be mounted as a volume (detected: ${mountStatus}).\n\n` +
+        message;
+      core.warning(message);
+    } else if (mountStatus === 'mounted') {
+      message =
+        `✅ Default cache path appears to be mounted as a volume (detected: ${mountStatus}).\n` +
+        'You are still using the default cache path inside a container; for clarity and portability,\n' +
+        'consider setting an explicit cache-path with a corresponding volume mount.\n\n' +
+        message;
+      core.info(message);
+    } else {
+      message =
+        `⚠️  Unable to determine if the default cache path is mounted as a volume (detected: ${mountStatus}).\n` +
+        'Please verify your volume mounts and consider using an explicit cache-path.\n\n' +
+        message;
+      core.notice(message);
+    }
   }
 }

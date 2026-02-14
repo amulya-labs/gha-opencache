@@ -100,10 +100,16 @@ export function isPathOnMountedVolume(targetPath: string): 'mounted' | 'not-moun
 
     // Check if path is under this mount, ensuring we match at path boundaries
     // to avoid false positives (e.g., /srv shouldn't match /service)
-    const isUnderMount =
-      normalizedPath.startsWith(mount.mountPoint) &&
-      (normalizedPath.length === mount.mountPoint.length ||
-        normalizedPath[mount.mountPoint.length] === '/');
+    let isUnderMount = false;
+
+    if (mount.mountPoint === '/') {
+      // Root mount: any absolute path is under this mount
+      isUnderMount = path.isAbsolute(normalizedPath);
+    } else if (normalizedPath.startsWith(mount.mountPoint)) {
+      isUnderMount =
+        normalizedPath.length === mount.mountPoint.length ||
+        normalizedPath[mount.mountPoint.length] === '/';
+    }
 
     if (isUnderMount && mount.mountPoint.length > bestMatchLength) {
       bestMatch = mount;
