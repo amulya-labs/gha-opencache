@@ -10,7 +10,229 @@ permissions:
   contents: read
 
 jobs:
+  validate:
+    name: Validate Examples & Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Download actionlint
+        run: |
+          set -euo pipefail
+
+          ACTIONLINT_VERSION="1.7.10"
+          ACTIONLINT_OS="linux"
+          ACTIONLINT_ARCH="amd64"
+
+          TARBALL="actionlint_${ACTIONLINT_VERSION}_${ACTIONLINT_OS}_${ACTIONLINT_ARCH}.tar.gz"
+          CHECKSUMS_FILE="actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          BASE_URL="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+
+          echo "Downloading actionlint ${ACTIONLINT_VERSION}..."
+          curl -sSL "${BASE_URL}/${TARBALL}" -o "${TARBALL}"
+          curl -sSL "${BASE_URL}/${CHECKSUMS_FILE}" -o "${CHECKSUMS_FILE}"
+
+          echo "Verifying checksum..."
+          grep "${TARBALL}" "${CHECKSUMS_FILE}" | sha256sum -c -
+
+          echo "Extracting actionlint..."
+          mkdir -p /tmp/actionlint-bin
+          tar -xzf "${TARBALL}" -C /tmp/actionlint-bin
+
+          echo "/tmp/actionlint-bin" >> "$GITHUB_PATH"
+
+      - name: Validate example workflows
+        run: |
+          set -e
+          echo "Validating example workflows..."
+
+          example_count=0
+          error_count=0
+
+          for file in examples/*.yml; do
+            echo ""
+            echo "=== Validating: $file ==="
+            example_count=$((example_count + 1))
+
+            if actionlint "$file"; then
+              echo "✅ $file is valid"
+            else
+              echo "❌ $file has errors"
+              error_count=$((error_count + 1))
+            fi
+          done
+
+          echo ""
+          echo "======================================"
+          echo "Validated $example_count example files"
+
+          if [ $error_count -gt 0 ]; then
+            echo "❌ $error_count file(s) with errors"
+            exit 1
+          else
+            echo "✅ All examples are valid!"
+          fi
+
+      - name: Check for common issues
+        run: |
+          set -e
+          echo "Checking for common issues in examples..."
+
+          # Fail if any gha-opencache @v1 references are present
+          if grep -r "amulya-labs/gha-opencache@v1" examples/ --include="*.yml"; then
+            echo ""
+            echo "❌ Error: Found gha-opencache @v1 references in examples"
+            echo "All examples must use @v2; please update these references."
+            exit 1
+          fi
+
+          echo "✅ No common issues found"
+
+      - name: Validate example consistency
+        run: |
+          echo "Checking example consistency..."
+
+          for file in examples/*.yml; do
+            if ! grep -q "^name:" "$file"; then
+              echo "❌ $file: Missing 'name:' field"
+              exit 1
+            fi
+          done
+
+          echo "✅ All examples have required fields"
+
+      - name: Validate YAML syntax in markdown files
+        run: |
+          set -e
+          echo "Validating YAML blocks in markdown files..."
+
+          pip install pyyaml --quiet
+
+          cat > /tmp/validate_md_yaml.py << 'PYTHON_SCRIPT'
+          import re
+          import sys
+          import yaml
+          from pathlib import Path
+
+          def extract_yaml_blocks(md_content):
+              """Extract YAML code blocks from markdown"""
+              pattern = r'```ya?ml[^\n]*\n(.*?)\n```'
+              blocks = re.findall(pattern, md_content, re.DOTALL)
+              return blocks
+
+          def validate_yaml_block(yaml_content, source, block_num):
+              """Validate YAML syntax"""
+              if '\n' not in yaml_content.strip():
+                  return True, None  # Single line = snippet, skip validation
+
+              try:
+                  yaml.safe_load(yaml_content)
+                  return True, None
+              except yaml.YAMLError as e:
+                  return False, str(e)
+
+          md_files = list(Path('.').rglob('*.md'))
+          md_files = [f for f in md_files if 'node_modules' not in str(f) and '.claude' not in str(f)]
+
+          total_blocks = 0
+          error_count = 0
+
+          for md_file in md_files:
+              content = md_file.read_text()
+              blocks = extract_yaml_blocks(content)
+
+              if blocks:
+                  print(f"\n=== {md_file} ===")
+                  print(f"  Found {len(blocks)} YAML block(s)")
+                  total_blocks += len(blocks)
+
+                  for i, block in enumerate(blocks, 1):
+                      valid, error = validate_yaml_block(block, md_file, i)
+                      if valid:
+                          print(f"  Block {i}: ✅ Valid YAML syntax")
+                      else:
+                          print(f"  Block {i}: ❌ Invalid YAML")
+                          print(f"    Error: {error}")
+                          error_count += 1
+
+          print(f"\n{'='*50}")
+          print(f"Total YAML blocks validated: {total_blocks}")
+          if error_count > 0:
+              print(f"❌ {error_count} block(s) with YAML syntax errors")
+              print(f"Note: Single-line snippets are skipped automatically")
+              sys.exit(1)
+          else:
+              print(f"✅ All YAML blocks have valid syntax")
+          PYTHON_SCRIPT
+
+          python3 /tmp/validate_md_yaml.py
+
+  s3-integration:
+    name: S3 Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Start MinIO
+        run: |
+          docker run -d --rm \
+            --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            quay.io/minio/minio:latest \
+            server /data
+
+          # Wait for MinIO to be ready
+          echo "Waiting for MinIO to start..."
+          minio_ready=0
+          for i in {1..30}; do
+            if curl -sf http://localhost:9000/minio/health/live; then
+              echo "MinIO is ready"
+              minio_ready=1
+              break
+            fi
+            echo "Attempt $i: MinIO not ready yet..."
+            sleep 1
+          done
+
+          if [ "$minio_ready" -ne 1 ]; then
+            echo "ERROR: MinIO failed to become ready after 30 attempts. Exiting workflow."
+            docker logs minio || true
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run S3 Integration Tests
+        run: npm run test:s3
+        env:
+          MINIO_ENDPOINT: http://localhost:9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+
+      - name: Show MinIO logs on failure
+        if: failure()
+        run: docker logs minio || true
+
+      - name: Stop MinIO
+        if: always()
+        run: docker stop minio || true
+
   build:
+    needs: [validate]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -73,7 +295,7 @@ jobs:
           echo "All dist files present"
 
   test-action:
-    needs: build
+    needs: [s3-integration]
     strategy:
       fail-fast: false
       matrix:
@@ -187,14 +409,30 @@ jobs:
 
   ci-success:
     name: CI Success
-    needs: [build, test-action]
+    needs: [validate, s3-integration, build, test-action]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check all jobs status
         run: |
+          echo "Validate: ${{ needs.validate.result }}"
+          echo "S3 Integration: ${{ needs.s3-integration.result }}"
           echo "Build: ${{ needs.build.result }}"
           echo "Test action: ${{ needs.test-action.result }}"
+
+          # Validate must succeed
+          if [ "${{ needs.validate.result }}" == "failure" ] || [ "${{ needs.validate.result }}" == "cancelled" ]; then
+            echo "❌ Validation failed or was cancelled"
+            exit 1
+          fi
+          echo "✅ Validation passed"
+
+          # S3 Integration must succeed
+          if [ "${{ needs.s3-integration.result }}" == "failure" ] || [ "${{ needs.s3-integration.result }}" == "cancelled" ]; then
+            echo "❌ S3 Integration tests failed or was cancelled"
+            exit 1
+          fi
+          echo "✅ S3 Integration tests passed"
 
           # Build must succeed
           if [ "${{ needs.build.result }}" == "failure" ] || [ "${{ needs.build.result }}" == "cancelled" ]; then

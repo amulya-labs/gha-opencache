@@ -8,6 +8,7 @@ import {
 } from './utils/actionUtils';
 import { IStateProvider } from './utils/stateProvider';
 import { Outputs, State } from './constants';
+import { maybeWarnContainerConfig } from './utils/containerWarnings';
 
 export interface RestoreResult {
   cacheHit: boolean;
@@ -37,6 +38,9 @@ export async function restoreCache(stateProvider: IStateProvider): Promise<Resto
 
   if (!result.entry) {
     core.info('Cache not found');
+
+    // Warn if likely misconfigured container cache path
+    maybeWarnContainerConfig(inputs);
 
     if (inputs.failOnCacheMiss) {
       throw new Error(`Cache not found for key: ${inputs.key}`);

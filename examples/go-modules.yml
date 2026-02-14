@@ -1,6 +1,11 @@
 name: Go with Module Cache
 # Example: Caching Go modules and build artifacts
 #
+# This example demonstrates:
+# - Separate caches for modules (go.sum) and build artifacts (*.go)
+# - restore-keys for graceful fallback when dependencies change
+# - Multiple cache usage in one workflow
+#
 # Storage options:
 # 1. Local filesystem (shown below):
 #    - Requires: self-hosted runners with persistent disk
@@ -16,7 +21,7 @@ name: Go with Module Cache
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
 
 jobs:
@@ -32,18 +37,28 @@ jobs:
           go-version: '1.21'
 
       - name: Cache Go modules
-        uses: amulya-labs/gha-opencache@v1
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: ~/go/pkg/mod
+          # Primary key: exact match on go.sum
           key: go-mod-${{ runner.os }}-${{ hashFiles('go.sum') }}
-          restore-keys: go-mod-${{ runner.os }}-
 
-      - name: Cache Go build
-        uses: amulya-labs/gha-opencache@v1
+          # Fallback: reuse modules from any previous go.sum
+          # This speeds up builds when dependencies change slightly
+          restore-keys: |
+            go-mod-${{ runner.os }}-
+
+      - name: Cache Go build artifacts
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: ~/.cache/go-build
+          # Primary key: exact match on all Go source files
           key: go-build-${{ runner.os }}-${{ hashFiles('**/*.go') }}
-          restore-keys: go-build-${{ runner.os }}-
+
+          # Fallback: reuse build cache from any previous source state
+          # Incremental compilation benefits from this
+          restore-keys: |
+            go-build-${{ runner.os }}-
 
       - name: Download dependencies
         run: go mod download

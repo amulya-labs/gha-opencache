@@ -1,0 +1,146 @@
+name: Save Always (Partial Results)
+# Example: Save cache even when workflow fails
+#
+# This example demonstrates:
+# - save-always: true - Preserves partial results on failure
+# - Incremental builds that benefit from partial caching
+# - Test coverage that accumulates over failed runs
+#
+# Use cases:
+# - Incremental compilation (C++, Rust, etc.)
+# - Test result caching (incremental test runs)
+# - Code coverage accumulation
+# - Long-running build steps that may timeout
+#
+# Default behavior (save-always: false):
+# - Cache only saved when ALL workflow steps succeed
+# - Failure = no cache save = lost work
+#
+# With save-always: true:
+# - Cache saved even if later steps fail
+# - Next run can reuse partial results
+# - Faster recovery from failures
+#
+# Docs: https://github.com/amulya-labs/gha-opencache#options
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  incremental-build:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      # === INCREMENTAL COMPILATION CACHE ===
+      - name: Cache Rust build artifacts (save always)
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: rust-incremental-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-incremental-${{ runner.os }}-
+
+          # Save cache even if build or tests fail
+          # This preserves incremental compilation state
+          save-always: true
+
+      - name: Build (incremental)
+        run: cargo build --release
+        # If this fails, cache is still saved!
+        # Next run will resume from last successful compilation
+
+      - name: Run tests
+        run: cargo test
+        # Even if tests fail, build cache is preserved
+
+  test-coverage:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # === TEST COVERAGE CACHE ===
+      - name: Cache test coverage (save always)
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: coverage/
+          key: coverage-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            coverage-${{ runner.os }}-
+
+          # Save partial coverage even if some tests fail
+          save-always: true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage || true
+        # Continues even on test failure
+
+      - name: Upload coverage
+        run: npm run coverage:upload
+        # Coverage from partial runs is still useful!
+
+# === COMPARISON ===
+#
+# WITHOUT save-always (default behavior):
+# 1. Build starts from scratch
+# 2. Compiles 80% of files successfully
+# 3. Compilation error on last file
+# 4. Workflow fails
+# 5. NO cache saved
+# 6. Next run: starts from scratch again
+#
+# WITH save-always: true:
+# 1. Build starts from scratch
+# 2. Compiles 80% of files successfully
+# 3. Compilation error on last file
+# 4. Workflow fails
+# 5. Cache SAVED (80% of work preserved)
+# 6. Next run: resumes from 80%, only rebuilds changed files
+#
+# === BEST PRACTICES ===
+#
+# Use save-always when:
+# - Build is incremental (C++, Rust, large TypeScript projects)
+# - Tests can run independently
+# - Partial results have value
+# - Build/test steps may timeout
+#
+# DON'T use save-always when:
+# - Cache depends on ALL steps succeeding (e.g., final artifacts)
+# - Partial state could be corrupted
+# - Cache size would grow unbounded with failures
+#
+# === REAL-WORLD EXAMPLES ===
+#
+# Example 1: Large C++ project
+#   - Compilation takes 30 minutes
+#   - Linking fails intermittently
+#   - save-always preserves 29 minutes of compilation
+#
+# Example 2: Test suite with flaky tests
+#   - 95% of tests pass
+#   - 5% are flaky and fail randomly
+#   - save-always preserves passing test results
+#
+# Example 3: Code coverage tracking
+#   - Want to track coverage over time
+#   - Some tests may fail on new code
+#   - save-always preserves coverage from passing tests

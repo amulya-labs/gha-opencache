@@ -223,11 +223,16 @@ Designed for reliability with self-healing cache indexes and lock-free archive c
 
 ## Examples
 
-[`examples/`](examples/) - Complete workflows for:
-
-**Languages:** [Node.js](examples/node-basic.yml), [Python](examples/python-pip.yml), [Go](examples/go-modules.yml), [Rust](examples/rust-cargo.yml)
-**Storage:** [MinIO](examples/s3-minio.yml), [Cloudflare R2](examples/s3-cloudflare-r2.yml)
-**Advanced:** [Multi-cache](examples/multi-cache.yml), [restore-keys](examples/restore-keys-advanced.yml), [Compression](examples/compression-tuning.yml)
+> **📚 [Browse all examples →](examples/)**
+>
+> 16+ complete, production-ready workflow examples organized by category:
+> - **Getting Started** - Node.js basic with detailed inline comments
+> - **Storage Backends** - S3/MinIO, Cloudflare R2, Google Cloud Storage
+> - **Advanced Features** - Multi-cache, restore-keys patterns, TTL/eviction, compression
+> - **Language-Specific** - Python, Go, Rust with best practices
+> - **Docker & Containers** - Volume mounts and container workflows
+>
+> Each example includes comprehensive documentation, real-world patterns, and troubleshooting guidance.
 
 ## Troubleshooting
 
@@ -267,13 +272,17 @@ Verify restore-keys have no trailing slashes or extra characters.
 
 **Quick fix** (set explicit cache path and mount it):
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
-  with:
-    cache-path: /cache
-container:
-  image: my-image
-  volumes:
-    - /srv/gha-cache:/cache
+jobs:
+  build:
+    runs-on: self-hosted
+    container:
+      image: my-image
+      volumes:
+        - /srv/gha-cache:/cache
+    steps:
+      - uses: amulya-labs/gha-opencache@v2
+        with:
+          cache-path: /cache
 ```
 
 > **See [docs/DOCKER.md](docs/DOCKER.md)** for complete setup guide (container volumes, Kubernetes, Docker Compose, verification, troubleshooting).

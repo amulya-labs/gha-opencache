@@ -33,7 +33,7 @@ jobs:
 
       # Cache 1: npm dependencies (changes infrequently)
       - name: Cache npm dependencies
-        uses: amulya-labs/gha-opencache@v1
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: node_modules
           key: deps-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -41,7 +41,7 @@ jobs:
 
       # Cache 2: Build artifacts (changes frequently)
       - name: Cache build output
-        uses: amulya-labs/gha-opencache@v1
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: dist
           key: build-${{ runner.os }}-${{ github.sha }}
@@ -51,7 +51,7 @@ jobs:
 
       # Cache 3: Test coverage (per branch)
       - name: Cache coverage
-        uses: amulya-labs/gha-opencache@v1
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: coverage
           key: coverage-${{ github.ref }}-${{ github.sha }}

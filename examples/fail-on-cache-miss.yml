@@ -1,0 +1,169 @@
+name: Fail on Cache Miss
+# Example: Enforce strict cache requirements
+#
+# This example demonstrates:
+# - fail-on-cache-miss: true - Workflow fails if cache not found
+# - Guaranteed dependencies in production deployments
+# - Cache validation in multi-stage pipelines
+#
+# Use cases:
+# - Production deployments (must use pre-built artifacts)
+# - Downstream jobs that require upstream cache
+# - Compliance requirements (reproducible builds)
+# - Cost control (prevent expensive rebuilds)
+#
+# Default behavior (fail-on-cache-miss: false):
+# - Cache miss = workflow continues normally
+# - Dependencies are built/downloaded fresh
+#
+# With fail-on-cache-miss: true:
+# - Cache miss = workflow fails immediately
+# - Forces cache to exist before proceeding
+# - Catches configuration errors early
+#
+# Docs: https://github.com/amulya-labs/gha-opencache#options
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  # === STAGE 1: BUILD (creates cache) ===
+  build:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache dependencies
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Cache build artifacts
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: dist/
+          key: build-${{ github.sha }}
+          # No restore-keys - this is always a fresh build
+
+  # === STAGE 2: DEPLOY (requires build cache) ===
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore build artifacts (REQUIRED)
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: dist/
+          key: build-${{ github.sha }}
+
+          # === ENFORCE CACHE REQUIREMENT ===
+          # Deployment MUST use artifacts from build job
+          # If cache missing = configuration error, fail fast
+          fail-on-cache-miss: true
+
+      # This step only runs if cache was found
+      - name: Deploy to production
+        run: |
+          echo "Deploying from dist/ ..."
+          # Deploy logic here
+
+  # === STAGE 3: TEST (requires build cache) ===
+  e2e-tests:
+    runs-on: self-hosted
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore build artifacts (REQUIRED)
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: dist/
+          key: build-${{ github.sha }}
+
+          # E2E tests require built artifacts
+          # Missing cache = invalid test environment
+          fail-on-cache-miss: true
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+# === WHY USE THIS? ===
+#
+# Problem: Production deployment using wrong code
+# - Build job succeeds, creates cache with key "build-abc123"
+# - Deploy job looks for key "build-abc124" (typo!)
+# - Cache miss, no error, deployment continues
+# - Deploy job uses outdated/wrong code = INCIDENT
+#
+# Solution: fail-on-cache-miss: true
+# - Build job succeeds, creates cache with key "build-abc123"
+# - Deploy job looks for key "build-abc124" (typo!)
+# - Cache miss detected
+# - Workflow FAILS immediately
+# - No deployment with wrong code
+#
+# === REAL-WORLD SCENARIOS ===
+#
+# Scenario 1: Multi-stage Docker builds
+# - Stage 1: Build base image, cache it
+# - Stage 2: Use base image to build app (fail if base missing)
+# - Stage 3: Deploy app (fail if app image missing)
+#
+# Scenario 2: Compliance (reproducible builds)
+# - All production deployments MUST use cached artifacts
+# - No ad-hoc builds in deployment jobs
+# - Audit trail: cache key = exact build version
+#
+# Scenario 3: Cost optimization
+# - Building dependencies is expensive (20 minutes, large compute)
+# - Should only happen in dedicated build jobs
+# - Other jobs reuse cache or fail (prevents wasteful rebuilds)
+#
+# Scenario 4: Cross-workflow dependencies
+# - Workflow A: Builds shared library, caches it
+# - Workflow B: Uses shared library (fail if not cached)
+# - Ensures workflow A ran successfully before B
+#
+# === BEST PRACTICES ===
+#
+# Use fail-on-cache-miss when:
+# ✅ Downstream jobs require upstream artifacts
+# ✅ Production deployments must use specific builds
+# ✅ Cache availability indicates system health
+# ✅ You want to catch configuration errors early
+#
+# DON'T use fail-on-cache-miss when:
+# ❌ Initial build job (nothing to restore yet)
+# ❌ Optional optimization caches (nice-to-have)
+# ❌ Development workflows (want flexibility)
+# ❌ restore-keys are used (partial matches expected)
+#
+# === DEBUGGING ===
+#
+# If workflow fails with cache miss:
+# 1. Check the cache key matches exactly
+# 2. Verify upstream job succeeded
+# 3. Confirm cache-path is correct
+# 4. Check TTL settings (cache may have expired)
+# 5. Enable debug: env: ACTIONS_STEP_DEBUG: true

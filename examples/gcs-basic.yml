@@ -35,11 +35,13 @@ jobs:
       # Authenticate with GCP using service account key
       - name: Set up GCP credentials
         run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > ${{ runner.temp }}/gcp-key.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/gcp-key.json" >> $GITHUB_ENV
+          echo '${{ secrets.GCP_SA_KEY }}' > "${{ runner.temp }}/gcp-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/gcp-key.json" >> "$GITHUB_ENV"
 
       # Cache node_modules using GCS
-      - uses: amulya-labs/gha-opencache@v1
+      - name: Cache npm dependencies
+        id: cache
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
