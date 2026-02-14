@@ -2,8 +2,8 @@ name: 'OpenCache Action'
 description: 'Fast, configurable drop-in replacement for actions/cache with pluggable backends (local disk, S3-compatible, GCS).'
 author: 'Amulya Labs'
 branding:
-  icon: 'archive'
-  color: 'blue'
+  icon: 'layers'
+  color: 'purple'
 
 inputs:
   key:
