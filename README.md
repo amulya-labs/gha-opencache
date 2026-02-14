@@ -96,8 +96,8 @@ Fast, configurable drop-in replacement for [`actions/cache`](https://github.com/
 **Legend**
 
 - ⚠️ = works, but with limitations
-  > cache incurs slow network I/O to and from github-actions server on every run
-- ☑️ = requires S3 or GCS backend for Github-hosted runners
+  > cache incurs slow network I/O to and from GitHub Actions server on every run
+- ☑️ = requires S3 or GCS backend for GitHub-hosted runners
   > local disk backend not available on GitHub-hosted runners
 - ✔️ = `zstd`, `gzip`, or `none` available in **OpenCache Actions**
   > only `zstd` is available in `actions/cache`
