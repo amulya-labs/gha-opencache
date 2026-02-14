@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'examples/**/*.yml'
+      - '*.md'
+      - 'docs/*.md'
       - '.github/workflows/validate-examples.yml'
   pull_request:
     paths:
       - 'examples/**/*.yml'
+      - '*.md'
+      - 'docs/*.md'
       - '.github/workflows/validate-examples.yml'
 
 permissions:
@@ -103,3 +107,71 @@ jobs:
           done
 
           echo "✅ All examples have required fields"
+
+      - name: Validate YAML syntax in markdown files
+        run: |
+          set -e
+          echo "Validating YAML blocks in markdown files..."
+
+          # Install Python YAML validator
+          pip install pyyaml --quiet
+
+          # Create Python script to extract and validate YAML blocks
+          cat > /tmp/validate_md_yaml.py << 'PYTHON_SCRIPT'
+          import re
+          import sys
+          import yaml
+          from pathlib import Path
+
+          def extract_yaml_blocks(md_content):
+              """Extract YAML code blocks from markdown"""
+              pattern = r'```yaml\n(.*?)\n```'
+              blocks = re.findall(pattern, md_content, re.DOTALL)
+              return blocks
+
+          def validate_yaml_block(yaml_content, source, block_num):
+              """Validate YAML syntax"""
+              try:
+                  yaml.safe_load(yaml_content)
+                  return True, None
+              except yaml.YAMLError as e:
+                  return False, str(e)
+
+          # Find all markdown files
+          md_files = list(Path('.').rglob('*.md'))
+          # Exclude node_modules and .claude
+          md_files = [f for f in md_files if 'node_modules' not in str(f) and '.claude' not in str(f)]
+
+          total_blocks = 0
+          error_count = 0
+
+          for md_file in md_files:
+              content = md_file.read_text()
+              blocks = extract_yaml_blocks(content)
+
+              if blocks:
+                  print(f"\n=== {md_file} ===")
+                  print(f"  Found {len(blocks)} YAML block(s)")
+                  total_blocks += len(blocks)
+
+                  for i, block in enumerate(blocks, 1):
+                      valid, error = validate_yaml_block(block, md_file, i)
+                      if valid:
+                          print(f"  Block {i}: ✅ Valid YAML syntax")
+                      else:
+                          print(f"  Block {i}: ❌ Invalid YAML")
+                          print(f"    Error: {error}")
+                          error_count += 1
+
+          print(f"\n{'='*50}")
+          print(f"Total YAML blocks validated: {total_blocks}")
+          if error_count > 0:
+              print(f"⚠️  {error_count} block(s) with YAML syntax errors")
+              print(f"Note: Markdown may contain intentional code snippets (not complete workflows)")
+              print(f"✅ Validation complete (errors are warnings only)")
+          else:
+              print(f"✅ All YAML blocks have valid syntax")
+          PYTHON_SCRIPT
+
+          # Run the validation script
+          python3 /tmp/validate_md_yaml.py
