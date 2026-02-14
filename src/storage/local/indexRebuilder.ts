@@ -55,7 +55,7 @@ export async function cleanupTempFiles(archivesDir: string): Promise<number> {
       core.info(`Cleaned up ${deletedCount} stale temporary files`);
     }
   } catch (err) {
-    core.warning(`Failed to clean up temp files in ${archivesDir}: ${err}`);
+    core.debug(`Failed to clean up temp files in ${archivesDir}: ${err}`);
   }
 
   return deletedCount;

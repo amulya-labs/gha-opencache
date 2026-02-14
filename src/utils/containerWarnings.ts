@@ -37,8 +37,8 @@ export function maybeWarnContainerConfig(inputs: RestoreInputs): void {
           'Add a volume mount in your workflow:\n' +
           '  container:\n' +
           '    volumes:\n' +
-          `      - /srv/gha-cache:${inputs.cachePath}\n\n` +
-          'Ensure the host path (/srv/gha-cache) exists and the mount paths match exactly.';
+          `      - ${inputs.cachePath}:${inputs.cachePath}\n\n` +
+          'Ensure the host directory exists and has correct permissions.';
         break;
 
       case 'mounted':
@@ -58,13 +58,21 @@ export function maybeWarnContainerConfig(inputs: RestoreInputs): void {
           '2. The volume mount paths match exactly\n' +
           '  container:\n' +
           '    volumes:\n' +
-          `      - /srv/gha-cache:${inputs.cachePath}\n\n` +
+          `      - ${inputs.cachePath}:${inputs.cachePath}\n\n` +
           '3. The host directory exists and has correct permissions';
         break;
     }
 
     message += '\n\nSee: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md';
-    core.warning(message);
+
+    // Use appropriate severity based on mount status
+    if (mountStatus === 'mounted') {
+      core.info(message);  // Reassurance - everything is OK
+    } else if (mountStatus === 'not-mounted') {
+      core.warning(message);  // Problem detected
+    } else {
+      core.notice(message);  // Unknown status - verification needed
+    }
   } else {
     // User is using default path (common v1→v2 upgrade issue)
     core.warning(

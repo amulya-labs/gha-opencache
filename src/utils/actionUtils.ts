@@ -159,22 +159,15 @@ function parseTtlDays(): number {
   }
 
   const trimmed = value.trim();
-  if (!isStrictInteger(trimmed)) {
+  if (!isStrictInteger(trimmed) || parseInt(trimmed, 10) < 0) {
     core.warning(
-      `Invalid ttl-days '${value}'. Must be a valid integer >= 0. Using default of ${DEFAULT_TTL_DAYS}.`
+      `Invalid ttl-days '${value}'. Must be non-negative integer. Using ${DEFAULT_TTL_DAYS}.\n` +
+      `Tip: Use 0 for no expiration.`
     );
     return DEFAULT_TTL_DAYS;
   }
 
-  const days = parseInt(trimmed, 10);
-  if (days < 0) {
-    core.warning(
-      `Invalid ttl-days '${value}'. Must be >= 0. Using default of ${DEFAULT_TTL_DAYS}.`
-    );
-    return DEFAULT_TTL_DAYS;
-  }
-
-  return days;
+  return parseInt(trimmed, 10);
 }
 
 /**
@@ -187,22 +180,15 @@ function parseMaxCacheSizeGb(): number {
   }
 
   const trimmed = value.trim();
-  if (!isStrictNumber(trimmed)) {
+  if (!isStrictNumber(trimmed) || parseFloat(trimmed) < 0) {
     core.warning(
-      `Invalid max-cache-size-gb '${value}'. Must be a valid number >= 0. Using default of ${DEFAULT_MAX_CACHE_SIZE_GB}.`
+      `Invalid max-cache-size-gb '${value}'. Must be non-negative number. Using ${DEFAULT_MAX_CACHE_SIZE_GB}.\n` +
+      `Tip: Use 0 for unlimited cache size.`
     );
     return DEFAULT_MAX_CACHE_SIZE_GB;
   }
 
-  const size = parseFloat(trimmed);
-  if (size < 0) {
-    core.warning(
-      `Invalid max-cache-size-gb '${value}'. Must be >= 0. Using default of ${DEFAULT_MAX_CACHE_SIZE_GB}.`
-    );
-    return DEFAULT_MAX_CACHE_SIZE_GB;
-  }
-
-  return size;
+  return parseFloat(trimmed);
 }
 
 /**

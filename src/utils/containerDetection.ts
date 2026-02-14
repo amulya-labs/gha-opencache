@@ -7,7 +7,6 @@ import * as path from 'path';
 interface MountInfo {
   mountPoint: string;
   fsType: string;
-  isBind: boolean;
 }
 
 /**
@@ -57,15 +56,14 @@ function parseMountInfo(): MountInfo[] {
 
       const mountPoint = parts[4];
       const sepIndex = parts.indexOf('-');
-      if (sepIndex === -1) continue;
+      // Ensure we have both fsType and source fields after the separator
+      if (sepIndex === -1 || sepIndex + 2 >= parts.length) continue;
 
       const fsType = parts[sepIndex + 1];
-      const source = parts[sepIndex + 2];
 
       mounts.push({
         mountPoint,
         fsType,
-        isBind: fsType === 'bind' || source.startsWith('/'),
       });
     }
 
@@ -106,9 +104,13 @@ export function isPathOnMountedVolume(targetPath: string): 'mounted' | 'not-moun
     }
   }
 
-  // If we found a non-overlay mount (especially bind mount), it's likely mounted
-  if (bestMatch && bestMatch.isBind) return 'mounted';
+  // If we found a non-overlay, non-tmpfs mount, it's persistent storage
+  // This includes bind mounts, device mounts (ext4, xfs), and network mounts (nfs, cifs)
+  if (bestMatch) return 'mounted';
 
   // Path is on overlay/tmpfs (ephemeral container filesystem)
+  // Note: In GitHub Actions containers, the root filesystem ("/") is typically overlay/tmpfs
+  // and is correctly treated as ephemeral. This function returns 'not-mounted' for paths
+  // that don't have an explicit non-ephemeral mount point.
   return 'not-mounted';
 }

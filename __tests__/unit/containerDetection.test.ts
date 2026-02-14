@@ -206,5 +206,32 @@ describe('containerDetection', () => {
 
       expect(isPathOnMountedVolume('/srv/gha-cache')).toBe('mounted');
     });
+
+    it('treats NFS mounts with non-path sources as mounted', () => {
+      const mountinfo =
+        '574 573 0:84 / / rw - overlay overlay rw\n' +
+        '575 574 0:86 / /mnt/nfs rw - nfs4 server:/export rw\n';
+      mockFs.readFileSync.mockReturnValue(mountinfo);
+
+      expect(isPathOnMountedVolume('/mnt/nfs')).toBe('mounted');
+    });
+
+    it('treats CIFS mounts with non-path sources as mounted', () => {
+      const mountinfo =
+        '574 573 0:84 / / rw - overlay overlay rw\n' +
+        '575 574 0:87 / /mnt/share rw - cifs //server/share rw\n';
+      mockFs.readFileSync.mockReturnValue(mountinfo);
+
+      expect(isPathOnMountedVolume('/mnt/share')).toBe('mounted');
+    });
+
+    it('treats special filesystems with "none" sources as mounted', () => {
+      const mountinfo =
+        '574 573 0:84 / / rw - overlay overlay rw\n' +
+        '575 574 0:88 / /sys/fs/cgroup rw - cgroup2 none rw\n';
+      mockFs.readFileSync.mockReturnValue(mountinfo);
+
+      expect(isPathOnMountedVolume('/sys/fs/cgroup')).toBe('mounted');
+    });
   });
 });

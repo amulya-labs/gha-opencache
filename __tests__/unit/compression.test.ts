@@ -108,7 +108,8 @@ describe('compression', () => {
         const result = await resolveCompressionMethod({ method: 'zstd', level: 25 });
 
         expect(result.level).toBe(19);
-        expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('clamping'));
+        expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Using 19'));
+        expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('faster'));
       });
 
       it('throws when zstd is not available', async () => {
@@ -141,7 +142,8 @@ describe('compression', () => {
         const result = await resolveCompressionMethod({ method: 'gzip', level: 15 });
 
         expect(result.level).toBe(9);
-        expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('clamping'));
+        expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('Using 9'));
+        expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('faster'));
       });
     });
 

@@ -72,18 +72,26 @@ export async function resolveCompressionMethod(
   } else if (method === 'zstd') {
     level = options.level ?? DEFAULT_ZSTD_LEVEL;
     // zstd supports levels 1-19 (and up to 22 with --ultra)
-    if (level < 1 || level > 19) {
-      core.warning(`Invalid zstd compression level ${level}, clamping to valid range (1-19)`);
-      level = Math.max(1, Math.min(19, level));
+    const clampedLevel = Math.max(1, Math.min(19, level));
+    if (clampedLevel !== level) {
+      core.warning(
+        `Invalid zstd compression level ${level} (valid: 1-19). Using ${clampedLevel}.\n` +
+        `Tip: Lower (1-3) = faster, higher (10-19) = better compression.`
+      );
     }
+    level = clampedLevel;
   } else {
     // gzip
     level = options.level ?? DEFAULT_GZIP_LEVEL;
     // gzip supports levels 1-9
-    if (level < 1 || level > 9) {
-      core.warning(`Invalid gzip compression level ${level}, clamping to valid range (1-9)`);
-      level = Math.max(1, Math.min(9, level));
+    const clampedLevel = Math.max(1, Math.min(9, level));
+    if (clampedLevel !== level) {
+      core.warning(
+        `Invalid gzip compression level ${level} (valid: 1-9). Using ${clampedLevel}.\n` +
+        `Tip: Lower (1-3) = faster, higher (7-9) = better compression.`
+      );
     }
+    level = clampedLevel;
   }
 
   return { method, level };

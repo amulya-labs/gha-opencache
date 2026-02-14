@@ -76,7 +76,7 @@ describe('containerWarnings', () => {
         expect(warningMessage).toContain('Add a volume mount');
       });
 
-      it('warns with reassurance when path is mounted', () => {
+      it('uses info level when path is mounted (reassurance)', () => {
         const inputs = createMockInputs({
           cachePath: '/srv/gha-cache',
           isExplicitCachePath: true,
@@ -86,16 +86,17 @@ describe('containerWarnings', () => {
 
         maybeWarnContainerConfig(inputs);
 
-        expect(mockCore.warning).toHaveBeenCalledTimes(1);
-        const warningMessage = mockCore.warning.mock.calls[0][0];
-        expect(warningMessage).toContain('Cache miss in container using cache path');
-        expect(warningMessage).toContain('/srv/gha-cache');
-        expect(warningMessage).toContain('✅');
-        expect(warningMessage).toContain('appears to be mounted as a volume');
-        expect(warningMessage).toContain('If this is the first run');
+        expect(mockCore.info).toHaveBeenCalledTimes(1);
+        expect(mockCore.warning).not.toHaveBeenCalled();
+        const infoMessage = mockCore.info.mock.calls[0][0];
+        expect(infoMessage).toContain('Cache miss in container using cache path');
+        expect(infoMessage).toContain('/srv/gha-cache');
+        expect(infoMessage).toContain('✅');
+        expect(infoMessage).toContain('appears to be mounted as a volume');
+        expect(infoMessage).toContain('If this is the first run');
       });
 
-      it('warns with instructions when mount status is unknown', () => {
+      it('uses notice level when mount status is unknown', () => {
         const inputs = createMockInputs({
           cachePath: '/srv/gha-cache',
           isExplicitCachePath: true,
@@ -105,16 +106,17 @@ describe('containerWarnings', () => {
 
         maybeWarnContainerConfig(inputs);
 
-        expect(mockCore.warning).toHaveBeenCalledTimes(1);
-        const warningMessage = mockCore.warning.mock.calls[0][0];
-        expect(warningMessage).toContain('Cache miss in container using cache path');
-        expect(warningMessage).toContain('/srv/gha-cache');
-        expect(warningMessage).toContain('⚠️');
-        expect(warningMessage).toContain('Unable to detect mount status');
-        expect(warningMessage).toContain('Please verify');
+        expect(mockCore.notice).toHaveBeenCalledTimes(1);
+        expect(mockCore.warning).not.toHaveBeenCalled();
+        const noticeMessage = mockCore.notice.mock.calls[0][0];
+        expect(noticeMessage).toContain('Cache miss in container using cache path');
+        expect(noticeMessage).toContain('/srv/gha-cache');
+        expect(noticeMessage).toContain('⚠️');
+        expect(noticeMessage).toContain('Unable to detect mount status');
+        expect(noticeMessage).toContain('Please verify');
       });
 
-      it('includes documentation link in all warnings', () => {
+      it('includes documentation link in all messages', () => {
         const inputs = createMockInputs({
           cachePath: '/srv/gha-cache',
           isExplicitCachePath: true,
@@ -126,7 +128,7 @@ describe('containerWarnings', () => {
 
         const warningMessage = mockCore.warning.mock.calls[0][0];
         expect(warningMessage).toContain(
-          'https://github.com/amulya-labs/gha-opencache#docker-usage'
+          'https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md'
         );
       });
     });
@@ -198,7 +200,7 @@ describe('containerWarnings', () => {
 
         const warningMessage = mockCore.warning.mock.calls[0][0];
         expect(warningMessage).toContain(
-          'https://github.com/amulya-labs/gha-opencache#docker-usage'
+          'https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md'
         );
       });
     });
@@ -248,6 +250,8 @@ describe('containerWarnings', () => {
         maybeWarnContainerConfig(inputs);
 
         expect(mockContainerDetection.isPathOnMountedVolume).toHaveBeenCalledWith('/srv/gha-cache');
+        // Should use info level for mounted path
+        expect(mockCore.info).toHaveBeenCalledTimes(1);
       });
     });
   });
