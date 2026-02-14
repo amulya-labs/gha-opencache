@@ -33,6 +33,7 @@ jobs:
       uses: github/codeql-action/init@17ec405481c24be464d4b2c5727a82f700ddb189  # v3.32.3
       with:
         languages: ${{ matrix.language }}
+        config-file: .github/codeql/codeql-config.yml
 
     - name: Autobuild
       uses: github/codeql-action/autobuild@17ec405481c24be464d4b2c5727a82f700ddb189  # v3.32.3
