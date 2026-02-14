@@ -1,5 +1,10 @@
 name: Node.js with Basic Cache
-# Example: Basic Node.js dependency caching with restore-keys fallback
+# Example: Node.js dependency caching with restore-keys fallback
+#
+# This example demonstrates:
+# - Basic cache key with exact match on package-lock.json
+# - restore-keys for branch-based fallback (reuses cache from main/develop)
+# - Automatic cache sharing across branches
 #
 # Local filesystem storage (storage-provider: local):
 # - Requires SELF-HOSTED RUNNERS with persistent disk
@@ -11,7 +16,7 @@ name: Node.js with Basic Cache
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
 
 jobs:
@@ -27,13 +32,21 @@ jobs:
           node-version: '20'
 
       - name: Cache npm dependencies
-        uses: amulya-labs/gha-opencache@v1
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: node_modules
+          # Primary key: exact match on package-lock.json
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: npm-${{ runner.os }}-
-          # storage-provider: local  # Default: uses local filesystem on self-hosted runner
-          # cache-path: ~/.cache/gha-opencache  # Default: where cache is stored on runner disk
+
+          # Fallback chain (tried in order if primary key not found):
+          # 1. Any cache for this OS (most recent)
+          # This allows reusing dependencies even when package-lock.json changes
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+          # Optional: customize cache location (defaults shown)
+          # storage-provider: local  # Default: uses local filesystem
+          # cache-path: ~/.cache/gha-opencache  # Default: where cache is stored
 
       - name: Install dependencies
         run: npm ci

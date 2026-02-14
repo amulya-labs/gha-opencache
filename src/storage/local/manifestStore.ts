@@ -116,21 +116,34 @@ export async function readManifest(archivePath: string): Promise<ArchiveManifest
 
     // Basic validation
     if (!manifest.version || !manifest.key || !manifest.archiveFilename) {
-      core.warning(`Invalid manifest format: ${manifestPath}`);
+      const missing: string[] = [];
+      if (!manifest.version) missing.push('version');
+      if (!manifest.key) missing.push('key');
+      if (!manifest.archiveFilename) missing.push('archiveFilename');
+
+      core.warning(
+        `Invalid manifest format: ${manifestPath}\n` +
+          `Missing fields: ${missing.join(', ')}\n` +
+          `Cache entry will be ignored. To fix: rm ${manifestPath}`
+      );
       return undefined;
     }
 
     // Version validation
     if (manifest.version !== MANIFEST_VERSION) {
       core.warning(
-        `Incompatible manifest version: ${manifest.version} (expected: ${MANIFEST_VERSION}): ${manifestPath}`
+        `Incompatible manifest version: ${manifest.version} (expected: ${MANIFEST_VERSION}): ${manifestPath}\n` +
+          `Cache entry will be ignored. Re-save cache to update to current version.`
       );
       return undefined;
     }
 
     return manifest;
   } catch (err) {
-    core.warning(`Failed to read manifest ${manifestPath}: ${err}`);
+    core.warning(
+      `Failed to read manifest ${manifestPath}: ${err}\n` +
+        `Cache entry will not be available. Consider removing corrupted file: rm ${manifestPath}`
+    );
     return undefined;
   }
 }

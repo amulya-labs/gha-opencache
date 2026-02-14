@@ -136,8 +136,7 @@ export class FileIndexStore implements IndexStore {
         return rebuiltIndex;
       }
 
-      // Unknown error - log and propagate
-      core.warning(`Unexpected error loading cache index from ${this.indexPath}: ${error}`);
+      // Unknown error - propagate so the error message becomes the failure reason in the caller
       throw new Error(
         `Failed to load cache index from ${this.indexPath}: ${error.message || error}`
       );

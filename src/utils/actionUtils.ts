@@ -49,6 +49,7 @@ export interface ActionInputs {
   saveAlways: boolean;
   storageProvider: StorageProviderType;
   cachePath: string;
+  isExplicitCachePath: boolean;
   s3: S3Inputs;
   gcs: GCSInputs;
   compression: CompressionOptions;
@@ -65,6 +66,7 @@ export type RestoreInputs = Pick<
   | 'lookupOnly'
   | 'storageProvider'
   | 'cachePath'
+  | 'isExplicitCachePath'
   | 's3'
   | 'gcs'
 >;
@@ -75,6 +77,7 @@ export type SaveInputs = Pick<
   | 'paths'
   | 'storageProvider'
   | 'cachePath'
+  | 'isExplicitCachePath'
   | 's3'
   | 'gcs'
   | 'compression'
@@ -156,22 +159,15 @@ function parseTtlDays(): number {
   }
 
   const trimmed = value.trim();
-  if (!isStrictInteger(trimmed)) {
+  if (!isStrictInteger(trimmed) || parseInt(trimmed, 10) < 0) {
     core.warning(
-      `Invalid ttl-days '${value}'. Must be a valid integer >= 0. Using default of ${DEFAULT_TTL_DAYS}.`
+      `Invalid ttl-days '${value}'. Must be non-negative integer. Using ${DEFAULT_TTL_DAYS}.\n` +
+        `Tip: Use 0 for no expiration.`
     );
     return DEFAULT_TTL_DAYS;
   }
 
-  const days = parseInt(trimmed, 10);
-  if (days < 0) {
-    core.warning(
-      `Invalid ttl-days '${value}'. Must be >= 0. Using default of ${DEFAULT_TTL_DAYS}.`
-    );
-    return DEFAULT_TTL_DAYS;
-  }
-
-  return days;
+  return parseInt(trimmed, 10);
 }
 
 /**
@@ -184,22 +180,15 @@ function parseMaxCacheSizeGb(): number {
   }
 
   const trimmed = value.trim();
-  if (!isStrictNumber(trimmed)) {
+  if (!isStrictNumber(trimmed) || parseFloat(trimmed) < 0) {
     core.warning(
-      `Invalid max-cache-size-gb '${value}'. Must be a valid number >= 0. Using default of ${DEFAULT_MAX_CACHE_SIZE_GB}.`
+      `Invalid max-cache-size-gb '${value}'. Must be non-negative number. Using ${DEFAULT_MAX_CACHE_SIZE_GB}.\n` +
+        `Tip: Use 0 for unlimited cache size.`
     );
     return DEFAULT_MAX_CACHE_SIZE_GB;
   }
 
-  const size = parseFloat(trimmed);
-  if (size < 0) {
-    core.warning(
-      `Invalid max-cache-size-gb '${value}'. Must be >= 0. Using default of ${DEFAULT_MAX_CACHE_SIZE_GB}.`
-    );
-    return DEFAULT_MAX_CACHE_SIZE_GB;
-  }
-
-  return size;
+  return parseFloat(trimmed);
 }
 
 /**
@@ -272,7 +261,9 @@ export function getInputs(): ActionInputs {
   const lookupOnly = core.getBooleanInput(Inputs.LookupOnly);
   const saveAlways = core.getBooleanInput(Inputs.SaveAlways);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
+  const cachePathInput = core.getInput(Inputs.CachePath);
+  const isExplicitCachePath = !!cachePathInput;
+  const cachePath = cachePathInput || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();
@@ -292,6 +283,7 @@ export function getInputs(): ActionInputs {
     saveAlways,
     storageProvider,
     cachePath,
+    isExplicitCachePath,
     s3,
     gcs,
     compression,
@@ -307,7 +299,9 @@ export function getRestoreInputs(): RestoreInputs {
   const failOnCacheMiss = core.getBooleanInput(Inputs.FailOnCacheMiss);
   const lookupOnly = core.getBooleanInput(Inputs.LookupOnly);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
+  const cachePathInput = core.getInput(Inputs.CachePath);
+  const isExplicitCachePath = !!cachePathInput;
+  const cachePath = cachePathInput || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
 
@@ -323,6 +317,7 @@ export function getRestoreInputs(): RestoreInputs {
     lookupOnly,
     storageProvider,
     cachePath,
+    isExplicitCachePath,
     s3,
     gcs,
   };
@@ -332,7 +327,9 @@ export function getSaveInputs(): SaveInputs {
   const key = core.getInput(Inputs.Key, { required: true });
   const paths = core.getInput(Inputs.Path, { required: true }).split('\n').filter(Boolean);
   const storageProvider = parseStorageProvider();
-  const cachePath = core.getInput(Inputs.CachePath) || getDefaultCachePath();
+  const cachePathInput = core.getInput(Inputs.CachePath);
+  const isExplicitCachePath = !!cachePathInput;
+  const cachePath = cachePathInput || getDefaultCachePath();
   const s3 = parseS3Inputs();
   const gcs = parseGCSInputs();
   const compression = parseCompressionOptions();
@@ -343,7 +340,18 @@ export function getSaveInputs(): SaveInputs {
   validateS3Inputs(storageProvider, s3);
   validateGCSInputs(storageProvider, gcs);
 
-  return { key, paths, storageProvider, cachePath, s3, gcs, compression, ttlDays, maxCacheSizeGb };
+  return {
+    key,
+    paths,
+    storageProvider,
+    cachePath,
+    isExplicitCachePath,
+    s3,
+    gcs,
+    compression,
+    ttlDays,
+    maxCacheSizeGb,
+  };
 }
 
 export function getRepoInfo(): { owner: string; repo: string } {

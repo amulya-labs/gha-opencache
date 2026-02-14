@@ -1,0 +1,210 @@
+name: Lookup Only (Cache Validation)
+# Example: Check cache existence without downloading
+#
+# This example demonstrates:
+# - lookup-only: true - Checks if cache exists, doesn't download it
+# - Conditional workflow paths based on cache availability
+# - Cache warming and validation strategies
+#
+# Use cases:
+# - Matrix builds (check once, restore in parallel jobs)
+# - Conditional workflows (different paths for cache hit/miss)
+# - Cache warming (verify cache before expensive operations)
+# - Health checks (monitor cache availability)
+#
+# Default behavior (lookup-only: false):
+# - Checks for cache AND downloads it if found
+#
+# With lookup-only: true:
+# - Only checks existence, sets cache-hit output
+# - No download = fast operation
+# - Use outputs.cache-hit to make decisions
+#
+# Docs: https://github.com/amulya-labs/gha-opencache#options
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  # === USE CASE 1: Cache Warming Strategy ===
+  check-cache:
+    runs-on: self-hosted
+    outputs:
+      cache-hit: ${{ steps.cache-check.outputs.cache-hit }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if cache exists (lookup only)
+        id: cache-check
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+          # Only check existence, don't download
+          # This is fast (~1s vs potentially minutes)
+          lookup-only: true
+
+      - name: Report cache status
+        run: |
+          if [[ "${{ steps.cache-check.outputs.cache-hit }}" == "true" ]]; then
+            echo "✅ Cache exists and is ready"
+          else
+            echo "❌ Cache miss - build job will need to install dependencies"
+          fi
+
+  # === USE CASE 2: Conditional Build Path ===
+  build:
+    runs-on: self-hosted
+    needs: check-cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Actual cache restore (downloads the cache)
+      - name: Restore cache
+        if: needs.check-cache.outputs.cache-hit == 'true'
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: deps-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # Fast path: cache hit
+      - name: Quick build (with cache)
+        if: needs.check-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "Using cached dependencies"
+          npm run build
+
+      # Slow path: cache miss
+      - name: Full build (without cache)
+        if: needs.check-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Installing fresh dependencies"
+          npm ci
+          npm run build
+
+  # === USE CASE 3: Matrix Build Optimization ===
+  check-matrix-cache:
+    runs-on: self-hosted
+    outputs:
+      cache-hit-20: ${{ steps.check-20.outputs.cache-hit }}
+      cache-hit-18: ${{ steps.check-18.outputs.cache-hit }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Check all matrix caches in parallel (fast)
+      - name: Check Node 20 cache
+        id: check-20
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: deps-node20-${{ hashFiles('package-lock.json') }}
+          lookup-only: true
+
+      - name: Check Node 18 cache
+        id: check-18
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: deps-node18-${{ hashFiles('package-lock.json') }}
+          lookup-only: true
+
+  test-matrix:
+    runs-on: self-hosted
+    needs: check-matrix-cache
+    strategy:
+      matrix:
+        node: [18, 20]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Restore cache
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: deps-node${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install if needed
+        run: |
+          if [[ ! -d "node_modules" ]]; then
+            npm ci
+          fi
+
+      - name: Test
+        run: npm test
+
+# === BENEFITS ===
+#
+# 1. Performance:
+#    - lookup-only is fast (checks metadata only)
+#    - Download only when actually needed
+#    - Matrix builds: check once, restore in parallel
+#
+# 2. Workflow Control:
+#    - Different code paths for cache hit/miss
+#    - Conditional job execution
+#    - Resource optimization
+#
+# 3. Visibility:
+#    - Early warning if cache missing
+#    - Can trigger cache warming
+#    - Better job orchestration
+#
+# === COMPARISON ===
+#
+# WITHOUT lookup-only:
+# - Every job downloads cache (even if not needed)
+# - Matrix builds download same cache N times
+# - Can't make decisions based on cache state
+#
+# WITH lookup-only:
+# - Check once, decide what to do
+# - Download only in jobs that need it
+# - Optimize workflow based on cache availability
+#
+# === REAL-WORLD EXAMPLES ===
+#
+# Example 1: Expensive download
+# - Cache is 5GB
+# - Matrix has 10 variations
+# - Without lookup-only: 10 × 5GB = 50GB downloaded
+# - With lookup-only: Check once, restore only in jobs that use it
+#
+# Example 2: Cache warming workflow
+# - Scheduled job checks if caches exist
+# - If missing, triggers cache rebuild
+# - Ensures developers always have warm cache
+#
+# Example 3: Deployment validation
+# - Before deploying, verify required caches exist
+# - If missing, abort deployment
+# - Uses lookup-only for fast validation
+#
+# === BEST PRACTICES ===
+#
+# Use lookup-only when:
+# ✅ You need to make decisions based on cache state
+# ✅ Multiple jobs might need the same cache
+# ✅ Cache is large and download is expensive
+# ✅ You want fast cache validation
+#
+# DON'T use lookup-only when:
+# ❌ You always need to restore the cache
+# ❌ Cache is small (download is fast anyway)
+# ❌ Only one job uses the cache
