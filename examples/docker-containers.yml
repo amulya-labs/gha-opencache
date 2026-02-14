@@ -1,0 +1,231 @@
+name: Docker Container Workflows
+# Example: Using gha-opencache in containerized workflows
+#
+# This example demonstrates:
+# - Proper cache-path configuration for containers
+# - Volume mounts for persistent caching
+# - Multi-container workflows
+# - Container-specific cache isolation
+#
+# Key difference from actions/cache:
+# - actions/cache struggles with containers (network round-trips)
+# - gha-opencache with local storage is FAST (no network)
+# - Full control over cache location and persistence
+#
+# CRITICAL: Containers need explicit cache-path + volume mounts
+# Without this, caches are stored in ephemeral container filesystem!
+#
+# See comprehensive guide: docs/DOCKER.md
+# Docs: https://github.com/amulya-labs/gha-opencache#docker-containers
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  # === EXAMPLE 1: Single Container ===
+  node-container:
+    runs-on: self-hosted
+    container:
+      image: node:20
+      volumes:
+        # Mount host directory to container
+        # Format: host-path:container-path
+        - /srv/gha-cache:/srv/gha-cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache npm dependencies
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: npm-container-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-container-
+
+          # === CRITICAL: Point to mounted volume ===
+          # Must match the container path (right side of volume mount)
+          cache-path: /srv/gha-cache
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  # === EXAMPLE 2: Multiple Containers (Service Containers) ===
+  integration-tests:
+    runs-on: self-hosted
+    container:
+      image: node:20
+      volumes:
+        - /var/cache/actions:/cache
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        volumes:
+          - /var/cache/actions/postgres:/var/lib/postgresql/data
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache node_modules
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: node_modules
+          key: deps-integration-${{ hashFiles('package-lock.json') }}
+          cache-path: /cache  # Mounted volume
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgres://postgres:postgres@postgres:5432/test
+
+  # === EXAMPLE 3: Kubernetes Runners ===
+  kubernetes-build:
+    runs-on: self-hosted  # Kubernetes runner
+    container:
+      image: gradle:jdk17
+      volumes:
+        # PersistentVolumeClaim mounted to container
+        - /mnt/k8s-cache:/cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Gradle dependencies
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            gradle-
+
+          # Cache stored on PersistentVolume
+          cache-path: /cache
+
+      - name: Build with Gradle
+        run: gradle build
+
+  # === EXAMPLE 4: Matrix Build with Containers ===
+  multi-python:
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        python: ['3.9', '3.10', '3.11']
+
+    container:
+      image: python:${{ matrix.python }}
+      volumes:
+        - /srv/gha-cache:/srv/gha-cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache pip packages
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: ~/.cache/pip
+          # Separate cache per Python version
+          key: pip-py${{ matrix.python }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            pip-py${{ matrix.python }}-
+          cache-path: /srv/gha-cache
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
+# === CRITICAL CONFIGURATION ===
+#
+# 1. Volume Mount:
+#    container:
+#      volumes:
+#        - /host/path:/container/path
+#
+# 2. cache-path Input:
+#    with:
+#      cache-path: /container/path  # Must match container path!
+#
+# 3. Common Mistakes:
+#    ❌ cache-path: /host/path       # Wrong! Use container path
+#    ❌ No volume mount               # Cache lost on container exit
+#    ❌ Mismatched paths              # Cache not persisted
+#
+# === AUTOMATIC WARNINGS ===
+#
+# gha-opencache detects container misconfiguration:
+#
+# ✅ Path is mounted:
+#    "✅ Path appears to be mounted as a volume"
+#    (First run cache miss is expected)
+#
+# ❌ Path NOT mounted:
+#    "❌ This path does NOT appear to be mounted as a volume!
+#     Add volume mount to your workflow..."
+#
+# ⚠️ Unable to detect:
+#    "⚠️ Unable to detect mount status. Please verify..."
+#
+# === WHY THIS MATTERS ===
+#
+# Without volume mounts:
+# 1. Cache stored in container's ephemeral filesystem
+# 2. Container exits
+# 3. Cache is LOST
+# 4. Next run starts from scratch
+# 5. No caching benefit!
+#
+# With volume mounts:
+# 1. Cache stored on host's persistent storage
+# 2. Container exits
+# 3. Cache PERSISTS
+# 4. Next run reuses cache
+# 5. Fast builds! ✨
+#
+# === STORAGE OPTIONS ===
+#
+# Local Storage (shown above):
+# - Best for: self-hosted runners
+# - Fastest (no network)
+# - Requires: persistent disk on runner
+#
+# S3/GCS Storage:
+# - Best for: GitHub-hosted runners in containers
+# - Slower (network round-trips)
+# - Benefit: works without volume mounts
+# - See: s3-*.yml, gcs-*.yml examples
+#
+# === CONTAINER DETECTION ===
+#
+# gha-opencache automatically detects:
+# - Docker (via /.dockerenv)
+# - Kubernetes (via KUBERNETES_SERVICE_HOST)
+# - Podman (via /run/.containerenv)
+# - Generic containers (via cgroup)
+#
+# Mount detection (parses /proc/self/mountinfo):
+# - Bind mounts → "mounted"
+# - overlay/tmpfs → "not-mounted"
+# - Unable to determine → "unknown"
+#
+# === MIGRATION FROM v1 ===
+#
+# v1 used /srv/gha-cache by default (absolute path)
+# v2 uses ~/.cache/gha-opencache (user-relative)
+#
+# In containers, ~/.cache is usually NOT mounted!
+#
+# Migration steps:
+# 1. Add volume mount (see examples above)
+# 2. Set cache-path to mounted location
+# 3. Update all cache restore/save steps
+#
+# See: docs/DOCKER.md for detailed migration guide

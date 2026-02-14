@@ -1,27 +1,29 @@
 name: Advanced restore-keys Patterns
-# Example: Advanced restore-keys patterns for different use cases
+# Example: Advanced restore-keys patterns for real-world scenarios
 #
-# Storage options:
-# 1. Local filesystem (shown below):
-#    - Requires: self-hosted runners with persistent disk
-#    - Fastest, no external dependencies
-#    - Cache stored at ~/.cache/gha-opencache (default)
+# This example demonstrates:
+# - Branch-based cache fallback chains
+# - Monorepo partial cache reuse
+# - Dependency update strategies
+# - Time-based cache rotation
+# - How restore-keys selection algorithm works
 #
-# 2. S3/GCS backends (see s3-*.yml, gcs-*.yml):
-#    - Works on: GitHub-hosted OR self-hosted runners
-#    - Custom storage backend (actions/cache doesn't support this)
-#    - Shared cache across multiple runners
+# Key concept: restore-keys create a fallback chain
+# - Try primary key (exact match)
+# - If miss, try each restore-key as prefix (newest match wins)
+# - Allows graceful degradation instead of full rebuilds
 #
 # Docs: https://github.com/amulya-labs/gha-opencache#restore-keys-behavior
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'feature/**']
   pull_request:
 
 jobs:
-  build:
-    runs-on: self-hosted  # Use your self-hosted runner (e.g., [self-hosted, linux])
+  # === PATTERN 1: Branch-Based Fallback ===
+  branch-fallback:
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
@@ -31,49 +33,236 @@ jobs:
         with:
           node-version: '20'
 
-      # Multi-level fallback: OS-specific → any OS
-      - name: Cache with multi-level fallback
-        uses: amulya-labs/gha-opencache@v1
+      - name: Cache with branch hierarchy
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: node_modules
-          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            npm-${{ runner.os }}-
-            npm-
+          # Primary: exact match for this branch + lockfile
+          key: deps-${{ github.ref_name }}-${{ hashFiles('package-lock.json') }}
 
-      # Branch-aware: same branch → main → any
-      - name: Cache with branch awareness
-        uses: amulya-labs/gha-opencache@v1
+          # Fallback chain (tried in order):
+          # 1. Same branch, any lockfile (most recent)
+          # 2. Main branch with same lockfile
+          # 3. Main branch, any lockfile
+          # 4. Develop branch, any lockfile
+          # 5. Any branch, any lockfile (last resort)
+          restore-keys: |
+            deps-${{ github.ref_name }}-
+            deps-main-${{ hashFiles('package-lock.json') }}
+            deps-main-
+            deps-develop-
+            deps-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # === WHY THIS WORKS ===
+      # Feature branch workflow:
+      # - Day 1: Feature branch created, no cache → falls back to main
+      # - Day 2: Feature adds 1 new package → reuses most from Day 1
+      # - Day 3: Feature updates package → reuses most from Day 2
+      # Result: Fast builds even with changing dependencies!
+
+  # === PATTERN 2: Monorepo Workspace Caching ===
+  monorepo-workspaces:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: .next/cache
-          key: nextjs-${{ github.ref }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            nextjs-${{ github.ref }}-
-            nextjs-refs/heads/main-
-            nextjs-
+          node-version: '20'
 
-      # Version-specific: exact version → major version → any
-      - name: Cache with version fallback
-        uses: amulya-labs/gha-opencache@v1
+      - name: Cache root dependencies
+        uses: amulya-labs/gha-opencache@v2
         with:
-          path: ~/.npm
-          key: npm-global-${{ runner.os }}-node${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+          path: node_modules
+          key: root-deps-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            npm-global-${{ runner.os }}-node${{ matrix.node-version }}-
-            npm-global-${{ runner.os }}-node20-
-            npm-global-${{ runner.os }}-
+            root-deps-
 
-      # Time-based: weekly rotation with fallback
-      - name: Cache with weekly rotation
-        uses: amulya-labs/gha-opencache@v1
+      - name: Cache workspace A
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: packages/app-a/node_modules
+          # Include both workspace and root lockfiles
+          key: workspace-a-${{ hashFiles('packages/app-a/package.json', 'package-lock.json') }}
+          restore-keys: |
+            workspace-a-${{ hashFiles('packages/app-a/package.json') }}-
+            workspace-a-
+
+      - name: Cache workspace B
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: packages/app-b/node_modules
+          key: workspace-b-${{ hashFiles('packages/app-b/package.json', 'package-lock.json') }}
+          restore-keys: |
+            workspace-b-${{ hashFiles('packages/app-b/package.json') }}-
+            workspace-b-
+
+      - name: Install dependencies
+        run: npm install
+
+      # === WHY THIS WORKS ===
+      # - Each workspace has independent cache
+      # - Changes in app-a don't invalidate app-b's cache
+      # - Partial lockfile matches still reuse most packages
+      # - Much faster than full monorepo cache invalidation
+
+  # === PATTERN 3: Dependency Update Strategy ===
+  dependency-updates:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache with graceful dependency updates
+        uses: amulya-labs/gha-opencache@v2
         with:
           path: ~/.cache/pip
-          key: pip-${{ runner.os }}-week${{ github.run_number / 50 }}-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            pip-${{ runner.os }}-week${{ github.run_number / 50 }}-
-            pip-${{ runner.os }}-
+          # Primary: exact requirements.txt hash
+          key: pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
 
-      - name: Install and build
+          # Fallback: partial hash matches
+          # This allows reusing packages when only some deps change
+          restore-keys: |
+            pip-${{ hashFiles('requirements.txt') }}-
+            pip-
+
+      - name: Install dependencies
         run: |
-          npm ci
-          npm run build
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      # === WHY THIS WORKS ===
+      # Scenario: Update 1 package in requirements-dev.txt
+      # - Primary key: miss (requirements-dev.txt changed)
+      # - Fallback 1: hit on requirements.txt
+      # - Result: Reuses all main dependencies, downloads only dev changes
+      # - Time saved: ~90% vs full reinstall
+
+  # === PATTERN 4: OS + Architecture Matrix ===
+  cross-platform:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        arch: [x64, arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache with platform fallback
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: ~/.cargo
+          # Primary: exact OS, arch, and lockfile
+          key: cargo-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('Cargo.lock') }}
+
+          # Fallback chain:
+          # 1. Same OS+arch, any lockfile
+          # 2. Same OS, any arch
+          # 3. Any platform (some reuse better than none)
+          restore-keys: |
+            cargo-${{ matrix.os }}-${{ matrix.arch }}-
+            cargo-${{ matrix.os }}-
+            cargo-
+
+      - name: Build
+        run: cargo build --release
+
+      # === WHY THIS WORKS ===
+      # - Platform-specific binaries get exact matches
+      # - New architectures reuse same-OS cache (partial compatibility)
+      # - Brand new platforms still get some reuse
+      # - Graceful degradation across all dimensions
+
+  # === PATTERN 5: Time-Based Cache Rotation ===
+  weekly-rotation:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Calculate current week number
+      - name: Get week number
+        id: week
+        run: echo "number=$(date +%U)" >> $GITHUB_OUTPUT
+
+      - name: Cache with weekly rotation
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: ~/.npm
+          # Primary: current week + lockfile
+          key: npm-week${{ steps.week.outputs.number }}-${{ hashFiles('package-lock.json') }}
+
+          # Fallback:
+          # 1. Current week, any lockfile
+          # 2. Previous week (if we're early in current week)
+          # 3. Any week
+          restore-keys: |
+            npm-week${{ steps.week.outputs.number }}-
+            npm-week${{ steps.week.outputs.number - 1 }}-
+            npm-week
+
+      - name: Install dependencies
+        run: npm install
+
+      # === WHY THIS WORKS ===
+      # - Enforces periodic cache refresh (security updates, cleanup)
+      # - Within a week: full reuse (fast builds)
+      # - New week: can still reuse previous week (some benefit)
+      # - Balances freshness vs performance
+
+# === HOW RESTORE-KEYS ALGORITHM WORKS ===
+#
+# Given:
+#   key: "deps-feature-abc123"
+#   restore-keys:
+#     - "deps-feature-"
+#     - "deps-main-"
+#     - "deps-"
+#
+# Selection process:
+# 1. Try exact match on "deps-feature-abc123" → miss
+# 2. Try prefix "deps-feature-" → finds ["deps-feature-abc122", "deps-feature-xyz789"]
+#    → selects NEWEST (by timestamp)
+# 3. If no match, try "deps-main-" → finds ["deps-main-def456"]
+# 4. If no match, try "deps-" → finds any cache
+# 5. If no match, cache-hit = false
+#
+# === BEST PRACTICES ===
+#
+# ✅ DO:
+# - Order restore-keys from specific to general
+# - Include intermediate fallback levels
+# - Consider what data is reusable across scenarios
+# - Balance cache reuse vs freshness
+#
+# ❌ DON'T:
+# - Use too many restore-keys (diminishing returns)
+# - Make restore-keys too generic (poor match quality)
+# - Forget to test cache miss scenarios
+# - Ignore cache hit rate metrics
+#
+# === DEBUGGING RESTORE-KEYS ===
+#
+# Enable debug output to see selection:
+#   env:
+#     ACTIONS_STEP_DEBUG: true
+#
+# Check outputs:
+#   - cache-hit: true/false (exact match?)
+#   - cache-matched-key: actual key restored
+#
+# Common issues:
+# - Prefix doesn't match → check key format
+# - Wrong cache restored → check ordering
+# - No cache found → check restore-keys coverage
