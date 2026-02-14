@@ -63,7 +63,7 @@ export function maybeWarnContainerConfig(inputs: RestoreInputs): void {
         break;
     }
 
-    message += '\n\nSee: https://github.com/amulya-labs/gha-opencache#docker-usage';
+    message += '\n\nSee: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md';
     core.warning(message);
   } else {
     // User is using default path (common v1→v2 upgrade issue)
@@ -81,7 +81,7 @@ export function maybeWarnContainerConfig(inputs: RestoreInputs): void {
         '  container:\n' +
         '    volumes:\n' +
         '      - /srv/gha-cache:/srv/gha-cache\n\n' +
-        'See: https://github.com/amulya-labs/gha-opencache#docker-usage'
+        'See: https://github.com/amulya-labs/gha-opencache/blob/main/docs/DOCKER.md'
     );
   }
 }

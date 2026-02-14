@@ -1,345 +1,409 @@
 # Using gha-opencache with Docker Containers
 
-→ **[Main Documentation](../README.md)** | **[Migration Guide](../MIGRATION.md)** | **[Examples](../examples/)**
+This guide explains how to use gha-opencache in containerized GitHub Actions workflows.
 
-When running GitHub Actions jobs inside Docker containers, you **must** mount the cache directory as a volume from the host to ensure caches are shared across containers.
+## Quick Start
 
-> **Note**: The default cache path (`~/.cache/gha-opencache`) is inside the container's filesystem and won't persist. For Docker, always use an explicit `cache-path` that's mounted from the host.
-
-## The Problem
-
-**Each container has an isolated filesystem.** If you save a cache in one container and try to restore it in another container, the cache won't be found unless both containers mount the same host directory.
-
-### Example Failure Scenario
+If you're running workflows in Docker containers, you **must** specify an explicit `cache-path` that points to a mounted volume:
 
 ```yaml
 jobs:
-  build:
-    runs-on: self-hosted
-    container: my-build-image  # ❌ Container 1 - isolated filesystem
-    steps:
-      - uses: amulya-labs/gha-opencache@v2
-        with:
-          path: target/
-          key: build-cache
-      # Cache saved to /srv/gha-cache INSIDE container
-
-  test:
-    needs: build
-    runs-on: self-hosted
-    container: my-test-image   # ❌ Container 2 - different isolated filesystem
-    steps:
-      - uses: amulya-labs/gha-opencache@v2
-        with:
-          path: target/
-          key: build-cache
-      # Cache not found! Different container = different /srv/gha-cache
-```
-
-**Result**: Build saves cache successfully, Test can't find it 13 seconds later.
-
-## The Solution
-
-Mount the cache directory from the **host** into **all** containers that need to share caches.
-
-### Option 1: Container-level Volume Mounts (Recommended)
-
-```yaml
-jobs:
-  build:
+  my-job:
     runs-on: self-hosted
     container:
-      image: my-build-image
+      image: python:3.11
       volumes:
-        - /srv/gha-cache:/cache  # ✅ Mount host directory
+        - /srv/gha-cache:/srv/gha-cache  # Mount a volume
+
     steps:
       - uses: amulya-labs/gha-opencache@v2
         with:
-          path: target/
-          key: build-${{ hashFiles('**/Cargo.lock') }}
-          cache-path: /cache  # ✅ Use mounted path
-
-  test:
-    needs: build
-    runs-on: self-hosted
-    container:
-      image: my-test-image
-      volumes:
-        - /srv/gha-cache:/cache  # ✅ Same host directory
-    steps:
-      - uses: amulya-labs/gha-opencache@v2
-        with:
-          path: target/
-          key: build-${{ hashFiles('**/Cargo.lock') }}
-          cache-path: /cache  # ✅ Use mounted path
+          path: .venv
+          key: deps-${{ hashFiles('**/requirements.txt') }}
+          cache-path: /srv/gha-cache  # ← Required! Points to mounted volume
 ```
 
-**How it works**:
-- Both containers mount `/srv/gha-cache` from the **host** to `/cache` in the **container**
-- `cache-path: /cache` tells the action to use the mounted directory
-- Build saves to `/cache/owner/repo/` (which writes to host)
-- Test reads from `/cache/owner/repo/` (which reads from host)
-- Caches are shared! ✅
+## Why is this necessary?
 
-### Option 2: Custom Cache Path
+### The Problem
 
-If you can't modify container volumes, use a different cache path that's already mounted:
+Docker containers have **isolated filesystems**. When a container exits, everything in its filesystem is lost unless it's stored on a mounted volume.
+
+**gha-opencache v2** changed the default cache path from `/srv/gha-cache` (absolute) to `$HOME/.cache/gha-opencache` (user-relative):
 
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
-  with:
-    path: target/
-    key: build-cache
-    cache-path: /tmp/gha-cache  # Use a path that's shared across containers
+# Inside a container:
+# $HOME = /github/home
+# Default cache path = /github/home/.cache/gha-opencache
+# This path is INSIDE the container's ephemeral filesystem!
 ```
 
-Then mount `/tmp/gha-cache` from the host:
+**Result**: Without an explicit `cache-path`, caches are stored in the container's ephemeral filesystem and lost when the container exits.
+
+### The Solution
+
+1. **Mount a volume** in your container config
+2. **Set `cache-path`** to point to the mounted volume
+
+The cache is then stored on the host's persistent filesystem and survives container restarts.
+
+## Complete Examples
+
+### GitHub Actions with Docker Container
 
 ```yaml
-container:
-  image: my-image
-  volumes:
-    - /tmp/gha-cache:/tmp/gha-cache
-```
-
-### Option 3: Runner Working Directory
-
-GitHub Actions runner working directory (`${{ runner.workspace }}`) is typically mounted from the host. You can use this:
-
-```yaml
-- uses: amulya-labs/gha-opencache@v2
-  with:
-    path: target/
-    key: build-cache
-    cache-path: ${{ runner.workspace }}/.cache
-```
-
-**Note**: This may be cleaned up between runs, so less ideal for persistent caching.
-
-## Verification
-
-After configuring volumes, verify the setup:
-
-```yaml
-- name: Verify cache volume
-  run: |
-    echo "Cache directory from container:"
-    ls -la /srv/gha-cache/ || echo "Cache directory not mounted!"
-    echo ""
-    echo "Container ID:"
-    cat /proc/self/cgroup | grep docker
-    echo ""
-    echo "Mounted volumes:"
-    mount | grep gha-cache
-```
-
-## Troubleshooting
-
-### Problem: Cache saved but not found
-
-**Symptom**: Build job saves cache successfully, test job reports "cache not found" seconds later.
-
-**Diagnosis**:
-```yaml
-- name: Debug cache state
-  run: |
-    echo "=== Cache directory exists? ==="
-    ls -la /srv/gha-cache/
-
-    echo "=== Is it mounted from host? ==="
-    mount | grep gha-cache || echo "NOT MOUNTED - This is the problem!"
-
-    echo "=== Container info ==="
-    hostname
-    cat /proc/self/cgroup | head -5
-```
-
-**Solution**: Add volume mount to container configuration (see examples above).
-
-### Problem: Permission denied
-
-**Symptom**: `Permission denied writing cache index` or similar errors.
-
-**Cause**: Container runs as different user than host directory owner, or cache path isn't writable.
-
-**Solutions**:
-
-1. **Use a user-writable path** (simplest):
-```yaml
-- uses: amulya-labs/gha-opencache@v2
-  with:
-    cache-path: /tmp/gha-cache  # Writable by all users
-```
-
-2. **Fix host directory permissions**:
-```bash
-sudo chown -R 1000:1000 /srv/gha-cache
-# Or make it world-writable (less secure)
-sudo chmod -R 777 /srv/gha-cache
-```
-
-3. **Run container as specific user**:
-```yaml
-container:
-  image: my-image
-  options: --user 1000:1000
-  volumes:
-    - /srv/gha-cache:/srv/gha-cache
-```
-
-### Problem: Multiple runners conflict
-
-**Symptom**: Caches corrupted or lock timeouts.
-
-**Cause**: Multiple runners on same host writing to same cache directory simultaneously.
-
-**Solution**: Use separate cache directories per runner:
-```yaml
-- uses: amulya-labs/gha-opencache@v2
-  with:
-    cache-path: /srv/gha-cache/${{ runner.name }}
-```
-
----
-
-## Advanced Setup
-
-<details>
-<summary><strong>Docker Compose</strong></summary>
-
-If using Docker Compose for your self-hosted runner:
-
-```yaml
-services:
-  github-runner:
-    image: myoung34/github-runner:latest
-    volumes:
-      # Mount cache directory from host
-      - /srv/gha-cache:/srv/gha-cache
-      # Also mount Docker socket for container jobs
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      RUNNER_NAME: my-runner
-      RUNNER_WORKDIR: /tmp/runner
-```
-
-</details>
-
-<details>
-<summary><strong>Kubernetes / Actions Runner Controller</strong></summary>
-
-For Kubernetes-based runners using [actions-runner-controller](https://github.com/actions/actions-runner-controller):
-
-```yaml
-apiVersion: actions.summerwind.dev/v1alpha1
-kind: RunnerDeployment
-metadata:
-  name: my-runners
-spec:
-  template:
-    spec:
-      dockerdWithinRunnerContainer: true
-      volumes:
-        - name: cache-volume
-          hostPath:
-            path: /srv/gha-cache
-            type: DirectoryOrCreate
-      volumeMounts:
-        - name: cache-volume
-          mountPath: /srv/gha-cache
-      # Also need to mount to dind container
-      dockerVolumeMounts:
-        - name: cache-volume
-          mountPath: /srv/gha-cache
-```
-
-**Important**: With `dockerdWithinRunnerContainer: true`, you must add the volume to **both** the runner container and the dind (Docker-in-Docker) container using `dockerVolumeMounts`.
-
-See: [actions-runner-controller custom volumes docs](https://github.com/actions/actions-runner-controller/blob/master/docs/using-custom-volumes.md)
-
-</details>
-
-<details>
-<summary><strong>Complete Rust Build Example</strong></summary>
-
-```yaml
-name: Rust CI
+name: CI
 
 on: [push, pull_request]
 
 jobs:
-  prepare-image:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build CI image
-        run: docker build -t rust-ci:latest -f Dockerfile.ci .
-
-  build:
-    needs: prepare-image
-    runs-on: self-hosted
-    container:
-      image: rust-ci:latest
-      volumes:
-        - /srv/gha-cache:/srv/gha-cache  # ✅ Mount cache from host
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache cargo registry
-        uses: amulya-labs/gha-opencache@v2
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo target
-        uses: amulya-labs/gha-opencache@v2
-        with:
-          path: target/
-          key: cargo-target-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build
-        run: cargo build --release
-
   test:
-    needs: build
     runs-on: self-hosted
     container:
-      image: rust-ci:latest
+      image: node:20
       volumes:
-        - /srv/gha-cache:/srv/gha-cache  # ✅ Same mount
+        - /var/cache/actions:/var/cache/actions  # Persistent volume
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore cargo target
+      
+      - name: Cache node_modules
         uses: amulya-labs/gha-opencache@v2
         with:
-          path: target/
-          key: cargo-target-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          path: node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          cache-path: /var/cache/actions  # Must match mounted volume
 
-      - name: Test
-        run: cargo test --release
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
 ```
 
-</details>
+### Multiple Caches in One Job
 
-<details>
-<summary><strong>Quick Checklist</strong></summary>
+```yaml
+jobs:
+  build:
+    runs-on: self-hosted
+    container:
+      image: python:3.11
+      volumes:
+        - /srv/gha-cache:/srv/gha-cache
 
-Before deploying:
-- [ ] Cache directory mounted as volume in **all** container jobs
-- [ ] Using absolute paths (e.g., `/srv/gha-cache`)
-- [ ] Same path mounted in all containers
-- [ ] Permissions set correctly (1000:1000 or 777)
-- [ ] Verified mounts with debug commands
-- [ ] Separate cache dirs if multiple runners on same host
+    steps:
+      - uses: actions/checkout@v4
 
-</details>
+      # All caches use the same cache-path
+      - name: Cache Python dependencies
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: .venv
+          key: poetry-${{ hashFiles('poetry.lock') }}
+          cache-path: /srv/gha-cache
 
----
+      - name: Cache Ruff
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: .ruff_cache
+          key: ruff-${{ hashFiles('src/**/*.py') }}
+          cache-path: /srv/gha-cache
 
-## References
+      - name: Cache pytest
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: .pytest_cache
+          key: pytest-${{ hashFiles('tests/**/*.py') }}
+          cache-path: /srv/gha-cache
+```
 
-- [GitHub Actions Runner Controller - Custom Volumes](https://github.com/actions/actions-runner-controller/blob/master/docs/using-custom-volumes.md)
-- [Docker Build Cache in GitHub Actions](https://docs.docker.com/build/ci/github-actions/cache/)
-- [Self-hosted Runner Caching Discussion](https://github.com/orgs/community/discussions/18549)
-- [myoung34/docker-github-actions-runner](https://github.com/myoung34/docker-github-actions-runner)
+### Kubernetes Pods
+
+For Kubernetes runners, use persistent volumes:
+
+```yaml
+jobs:
+  build:
+    runs-on: self-hosted
+    container:
+      image: gradle:jdk17
+      volumes:
+        - /mnt/k8s-cache:/cache  # Persistent volume claim
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Cache Gradle
+        uses: amulya-labs/gha-opencache@v2
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ hashFiles('**/*.gradle*') }}
+          cache-path: /mnt/k8s-cache
+```
+
+## Upgrading from v1 to v2
+
+If you're upgrading from `gha-opencache@v1` and use containers, you **must** add `cache-path`:
+
+### Before (v1 - worked without cache-path)
+
+```yaml
+- uses: amulya-labs/gha-opencache@v1
+  with:
+    path: .venv
+    key: deps-${{ hashFiles('poetry.lock') }}
+    # No cache-path needed - v1 defaulted to /srv/gha-cache
+```
+
+### After (v2 - requires explicit cache-path)
+
+```yaml
+- uses: amulya-labs/gha-opencache@v2
+  with:
+    path: .venv
+    key: deps-${{ hashFiles('poetry.lock') }}
+    cache-path: /srv/gha-cache  # ← Now required!
+```
+
+**Important**: Make sure your container mounts the volume:
+
+```yaml
+container:
+  image: python:3.11
+  volumes:
+    - /srv/gha-cache:/srv/gha-cache  # ← Must match cache-path
+```
+
+## Automatic Detection and Warnings
+
+Starting in v2.1.0, gha-opencache automatically detects when you're running in a container and warns if cache configuration might be incorrect:
+
+### Warning: Default Path in Container
+
+```
+Warning: Cache miss in container using default cache path: /github/home/.cache/gha-opencache
+
+❌ Default path is NOT mounted (detected: not-mounted)
+
+Container filesystems are isolated - the default cache path is inside
+the container and will not persist between jobs.
+
+To fix, add an explicit cache-path with a mounted volume:
+
+  - uses: amulya-labs/gha-opencache@v2
+    with:
+      cache-path: /srv/gha-cache
+
+  container:
+    volumes:
+      - /srv/gha-cache:/srv/gha-cache
+```
+
+### Warning: Path Not Mounted
+
+```
+Warning: Cache miss in container using cache path: /srv/gha-cache
+
+❌ This path does NOT appear to be mounted as a volume!
+The cache is stored in the container's ephemeral filesystem and
+will be lost when the container exits.
+
+Add a volume mount in your workflow:
+  container:
+    volumes:
+      - /srv/gha-cache:/srv/gha-cache
+```
+
+### Warning: First Run (Path IS Mounted)
+
+```
+Warning: Cache miss in container using cache path: /srv/gha-cache
+
+✅ Path appears to be mounted as a volume.
+If this is the first run, this cache miss is expected.
+Otherwise, verify:
+1. The host directory exists and has correct permissions
+2. The cache key matches previous runs
+```
+
+## Troubleshooting
+
+### Cache Misses on Every Run
+
+**Symptom**: Cache never hits, dependencies reinstall every time
+
+**Cause**: Cache stored in ephemeral container filesystem
+
+**Solution**: Add explicit `cache-path` pointing to mounted volume
+
+```yaml
+# Before (broken)
+- uses: amulya-labs/gha-opencache@v2
+  with:
+    path: .venv
+    key: deps-${{ hashFiles('poetry.lock') }}
+    # Missing cache-path!
+
+# After (fixed)
+- uses: amulya-labs/gha-opencache@v2
+  with:
+    path: .venv
+    key: deps-${{ hashFiles('poetry.lock') }}
+    cache-path: /srv/gha-cache  # ← Added
+```
+
+### Permission Errors
+
+**Symptom**: `Permission denied` when saving cache
+
+**Cause**: Host directory doesn't exist or has wrong permissions
+
+**Solution**: Create directory and set permissions on the host:
+
+```bash
+# On the runner host (not in container)
+sudo mkdir -p /srv/gha-cache
+sudo chown -R 1001:1001 /srv/gha-cache  # Use your runner user ID
+sudo chmod -R 755 /srv/gha-cache
+```
+
+### Mount Path Mismatch
+
+**Symptom**: Cache saves but doesn't restore
+
+**Cause**: Volume mount path and cache-path don't match
+
+**Solution**: Ensure paths match exactly:
+
+```yaml
+container:
+  volumes:
+    - /srv/gha-cache:/srv/gha-cache
+    #   ^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^
+    #   Host path      Container path
+    
+steps:
+  - uses: amulya-labs/gha-opencache@v2
+    with:
+      cache-path: /srv/gha-cache  # ← Must match container path
+```
+
+### Cache Path Inside $HOME
+
+**Symptom**: Warning about ephemeral path
+
+**Cause**: Cache path is under `/github/home` (container's home)
+
+**Solution**: Use a path outside the container's home directory:
+
+```yaml
+# Bad - inside container home (ephemeral)
+cache-path: /github/home/.cache
+cache-path: ~/.cache/gha-opencache
+
+# Good - mounted volume (persistent)
+cache-path: /srv/gha-cache
+cache-path: /var/cache/actions
+cache-path: /mnt/cache
+```
+
+## Best Practices
+
+### 1. Use Consistent Cache Paths
+
+Pick one cache path and use it for all jobs:
+
+```yaml
+# Good - all jobs use same path
+jobs:
+  test:
+    container:
+      volumes:
+        - /srv/gha-cache:/srv/gha-cache
+    steps:
+      - uses: amulya-labs/gha-opencache@v2
+        with:
+          cache-path: /srv/gha-cache
+
+  build:
+    container:
+      volumes:
+        - /srv/gha-cache:/srv/gha-cache
+    steps:
+      - uses: amulya-labs/gha-opencache@v2
+        with:
+          cache-path: /srv/gha-cache
+```
+
+### 2. Document Why cache-path Is Needed
+
+Add comments explaining the container requirement:
+
+```yaml
+- name: Cache dependencies
+  # NOTE: cache-path required for container-based jobs
+  # Without it, v2 uses $HOME/.cache/gha-opencache (ephemeral)
+  uses: amulya-labs/gha-opencache@v2
+  with:
+    path: node_modules
+    cache-path: /srv/gha-cache  # Use mounted volume (persists across runs)
+    key: npm-${{ hashFiles('package-lock.json') }}
+```
+
+### 3. Verify Volume Mounts
+
+Always double-check that:
+- Volume is mounted: `container.volumes` includes your cache path
+- Paths match: Container mount path = `cache-path` value
+- Host directory exists and has correct permissions
+
+### 4. Use Environment Variables for Consistency
+
+Define cache path once and reuse:
+
+```yaml
+env:
+  CACHE_PATH: /srv/gha-cache
+
+jobs:
+  test:
+    container:
+      volumes:
+        - ${{ env.CACHE_PATH }}:${{ env.CACHE_PATH }}
+    steps:
+      - uses: amulya-labs/gha-opencache@v2
+        with:
+          cache-path: ${{ env.CACHE_PATH }}
+```
+
+## Non-Container Workflows
+
+If you're **not** using containers, `cache-path` is **optional**. The default user-relative path works fine:
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest  # No container
+    steps:
+      - uses: amulya-labs/gha-opencache@v2
+        with:
+          path: .venv
+          key: deps-${{ hashFiles('poetry.lock') }}
+          # No cache-path needed - default works!
+```
+
+## Getting Help
+
+If you encounter issues:
+
+1. Check the [Troubleshooting](#troubleshooting) section above
+2. Look for warning messages in your workflow logs
+3. Verify volume mounts with: `docker inspect <container-id>`
+4. Open an issue: https://github.com/amulya-labs/gha-opencache/issues
+
+## See Also
+
+- [Main README](../README.md)
+- [API Documentation](./API.md)
+- [Migration Guide](./MIGRATION.md)
