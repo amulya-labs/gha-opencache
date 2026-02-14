@@ -47,9 +47,10 @@ jobs:
           grep "${TARBALL}" "${CHECKSUMS_FILE}" | sha256sum -c -
 
           echo "Extracting actionlint..."
-          tar -xzf "${TARBALL}"
+          mkdir -p /tmp/actionlint-bin
+          tar -xzf "${TARBALL}" -C /tmp/actionlint-bin
 
-          echo "${PWD}" >> "$GITHUB_PATH"
+          echo "/tmp/actionlint-bin" >> "$GITHUB_PATH"
 
       - name: Validate all example workflows
         run: |
@@ -113,21 +114,6 @@ jobs:
 
           echo "✅ All examples have required fields"
 
-      - name: Debug - List all markdown files
-        run: |
-          echo "=== All .md files in repository ==="
-          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.claude/*" | sort
-          echo ""
-          echo "=== Files in docs/ directory ==="
-          ls -la docs/ || echo "docs/ directory doesn't exist"
-          echo ""
-          if [ -f "docs/checks.md" ]; then
-            echo "=== docs/checks.md EXISTS - first 50 lines ==="
-            head -50 docs/checks.md
-          else
-            echo "docs/checks.md does NOT exist"
-          fi
-
       - name: Validate YAML syntax in markdown files
         run: |
           set -e
@@ -166,16 +152,10 @@ jobs:
           # Exclude node_modules and .claude
           md_files = [f for f in md_files if 'node_modules' not in str(f) and '.claude' not in str(f)]
 
-          print(f"\n{'='*50}")
-          print(f"DEBUG: Found {len(md_files)} markdown files:")
-          for f in sorted(md_files):
-              print(f"  - {f}")
-          print(f"{'='*50}\n")
-
           total_blocks = 0
           error_count = 0
 
-          for md_file in sorted(md_files):
+          for md_file in md_files:
               content = md_file.read_text()
               blocks = extract_yaml_blocks(content)
 
