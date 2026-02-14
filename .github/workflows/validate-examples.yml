@@ -36,7 +36,7 @@ jobs:
           ACTIONLINT_ARCH="amd64"
 
           TARBALL="actionlint_${ACTIONLINT_VERSION}_${ACTIONLINT_OS}_${ACTIONLINT_ARCH}.tar.gz"
-          CHECKSUMS_FILE="checksums.txt"
+          CHECKSUMS_FILE="actionlint_${ACTIONLINT_VERSION}_checksums.txt"
           BASE_URL="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
 
           echo "Downloading actionlint ${ACTIONLINT_VERSION}..."
@@ -44,7 +44,7 @@ jobs:
           curl -sSL "${BASE_URL}/${CHECKSUMS_FILE}" -o "${CHECKSUMS_FILE}"
 
           echo "Verifying checksum..."
-          grep "  ${TARBALL}\$" "${CHECKSUMS_FILE}" | sha256sum -c -
+          grep "${TARBALL}" "${CHECKSUMS_FILE}" | sha256sum -c -
 
           echo "Extracting actionlint..."
           tar -xzf "${TARBALL}"
