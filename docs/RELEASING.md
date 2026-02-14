@@ -41,7 +41,23 @@ gh release create v${NEW_VERSION} --generate-notes --title "v${NEW_VERSION}"
 gh release view v${NEW_VERSION}
 ```
 
-The floating major tag (e.g., `v2`) is updated automatically by GitHub Actions.
+## What Happens Automatically
+
+When you create a release, the **release workflow** runs 5 parallel jobs:
+
+1. **build-artifacts** - Compiles and packages the action
+2. **provenance** - Generates SLSA Level 3 attestation
+3. **upload-assets** - Attaches signed artifacts to release
+4. **publish-package** - Publishes to GitHub Packages (npm)
+5. **update-major-tag** - Updates floating tag (e.g., `v2` → `v2.2.3`)
+
+**Generated Artifacts:**
+- Source tarball (`gha-opencache-vX.Y.Z.tar.gz`)
+- Dist bundle (`gha-opencache-vX.Y.Z-dist.tar.gz`)
+- SHA256 checksums (`checksums.txt`)
+- **SLSA provenance** (`*.intoto.jsonl`) - 10/10 OpenSSF score
+
+Users referencing `@v2` automatically get the latest compatible version. The entire release process completes in ~2-3 minutes.
 
 ## Versioning
 
@@ -69,7 +85,19 @@ gh pr list --state merged --base main --limit 10
 
 ### Setup Requirements
 
-The release workflow requires a `PUBLIC_REPO_WRITE_PAT` secret configured as a fine-grained PAT restricted to this repository with **Repository permissions > Contents: Read and write** to update floating major tags.
+**Required Secrets:**
+- `PUBLIC_REPO_WRITE_PAT`: Fine-grained PAT with **Repository permissions > Contents: Read and write** (for updating floating major tags)
+
+**Workflow Permissions** (configured automatically):
+- `id-token: write` - SLSA provenance generation
+- `contents: write` - Upload assets and update tags
+- `packages: write` - Publish to GitHub Packages
+
+**Workflow Structure:**
+All jobs run in parallel except `upload-assets` and `publish-package` which wait for artifact generation. The workflow is consolidated into `.github/workflows/release.yml` for easier maintenance.
+
+**GitHub Packages Publishing:**
+The `publish-package` job modifies `package.json` at publish-time to configure the scoped package name and registry. This is intentional to keep the source `package.json` clean and avoid registry-specific configuration in the repository. The published package metadata will differ from the source repository.
 
 ### Important: Never Create Releases for Major Tags
 
@@ -110,5 +138,34 @@ gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(cat <<'EOF'
 EOF
 )"
 ```
+
+### Verifying Release Signatures
+
+All releases include SLSA Level 3 provenance for supply chain security.
+
+**Download provenance:**
+```bash
+gh release download vX.Y.Z --pattern "*.intoto.jsonl"
+```
+
+**Verify artifact** (requires [slsa-verifier](https://github.com/slsa-framework/slsa-verifier)):
+```bash
+# First, identify the provenance file name
+PROVENANCE_FILE=$(ls *.intoto.jsonl)
+
+# Then verify the artifact
+slsa-verifier verify-artifact \
+  gha-opencache-vX.Y.Z.tar.gz \
+  --provenance-path "$PROVENANCE_FILE" \
+  --source-uri github.com/amulya-labs/gha-opencache
+```
+
+Expected: `✓ Verified SLSA provenance`
+
+**What's verified:**
+- ✅ Built by GitHub Actions (not locally modified)
+- ✅ Source matches tagged commit
+- ✅ Build process matches documented workflow
+- ✅ Artifact integrity preserved
 
 </details>
