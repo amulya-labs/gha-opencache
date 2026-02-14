@@ -9,6 +9,7 @@
 [![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amulya-labs/gha-opencache/badge)](https://securityscorecards.dev/viewer/?uri=github.com/amulya-labs/gha-opencache)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11945/badge)](https://www.bestpractices.dev/projects/11945)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Fast, configurable drop-in replacement for [`actions/cache`](https://github.com/actions/cache) with pluggable backends (local disk, S3-compatible, Google Cloud Storage).
