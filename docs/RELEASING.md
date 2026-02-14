@@ -43,6 +43,13 @@ gh release view v${NEW_VERSION}
 
 The floating major tag (e.g., `v2`) is updated automatically by GitHub Actions.
 
+**Release Assets:** The release workflow automatically generates and attaches:
+- Source tarball with checksums
+- Dist bundle (compiled action code)
+- **SLSA provenance** (*.intoto.jsonl) - cryptographic attestation for supply chain security
+
+These signed artifacts provide a **10/10 OpenSSF Scorecard "Signed-Releases" score**.
+
 ## Versioning
 
 - **MAJOR** (`v2.0.0`): Breaking changes
@@ -69,7 +76,22 @@ gh pr list --state merged --base main --limit 10
 
 ### Setup Requirements
 
-The release workflow requires a `PUBLIC_REPO_WRITE_PAT` secret configured as a fine-grained PAT restricted to this repository with **Repository permissions > Contents: Read and write** to update floating major tags.
+**Required Secrets:**
+- `PUBLIC_REPO_WRITE_PAT`: Fine-grained PAT with **Repository permissions > Contents: Read and write** to update floating major tags
+
+**Workflow Permissions:**
+- The release workflow requires `id-token: write` permission for SLSA provenance generation (already configured)
+- GitHub automatically provides this for releases
+
+**What Happens Automatically:**
+When you create a release (via `gh release create`), the release workflow:
+1. Builds the action and packages dist files
+2. Creates source tarball and dist bundle
+3. Generates SHA256 checksums
+4. Creates **SLSA Level 3 provenance** (*.intoto.jsonl)
+5. Uploads all artifacts to the release
+
+This ensures every release has cryptographically signed artifacts for supply chain security.
 
 ### Important: Never Create Releases for Major Tags
 
@@ -110,5 +132,30 @@ gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(cat <<'EOF'
 EOF
 )"
 ```
+
+### Verifying Release Signatures
+
+All releases include SLSA Level 3 provenance for supply chain security.
+
+**Download provenance:**
+```bash
+gh release download vX.Y.Z --pattern "*.intoto.jsonl"
+```
+
+**Verify artifact** (requires [slsa-verifier](https://github.com/slsa-framework/slsa-verifier)):
+```bash
+slsa-verifier verify-artifact \
+  gha-opencache-vX.Y.Z.tar.gz \
+  --provenance-path *.intoto.jsonl \
+  --source-uri github.com/amulya-labs/gha-opencache
+```
+
+Expected: `✓ Verified SLSA provenance`
+
+**What's verified:**
+- ✅ Built by GitHub Actions (not locally modified)
+- ✅ Source matches tagged commit
+- ✅ Build process matches documented workflow
+- ✅ Artifact integrity preserved
 
 </details>
