@@ -13,6 +13,18 @@ import * as core from '@actions/core';
 
 const mockCore = core as jest.Mocked<typeof core>;
 
+// Type for accessing private methods in tests
+type BaseStorageProviderWithPrivates = BaseStorageProvider & {
+  cleanupExpiredEntries(index: CacheIndex): Promise<{deletedCount: number; index: CacheIndex}>;
+  evictToSize(index: CacheIndex, entrySizeBytes: number): Promise<{index: CacheIndex; toDelete: CacheEntry[]}>;
+  deleteEvictedEntries(entries: CacheEntry[]): Promise<void>;
+  maybeEvict(index: CacheIndex, entrySizeBytes: number): Promise<{toDelete: CacheEntry[]}>;
+  calculateExpiresAt(): string | undefined;
+  updateAccessTimeForEntry(key: string): Promise<void>;
+  addEntryToIndex(entry: CacheEntry): Promise<void>;
+  deleteManifestIfLocal(archivePath: string): Promise<void>;
+};
+
 // Test implementation of BaseStorageProvider
 class TestStorageProvider extends BaseStorageProvider {
   async restore(_entry: CacheEntry): Promise<void> {
@@ -214,7 +226,7 @@ describe('BaseStorageProvider', () => {
         entries: [validEntry, expiredEntry],
       };
 
-      const result = await (provider as any).cleanupExpiredEntries(index);
+      const result = await (provider as BaseStorageProviderWithPrivates).cleanupExpiredEntries(index);
 
       expect(result.deletedCount).toBe(1);
       expect(result.index.entries).toHaveLength(1);
@@ -238,7 +250,7 @@ describe('BaseStorageProvider', () => {
 
       mockBackend.delete.mockRejectedValue(new Error('Delete failed'));
 
-      const result = await (provider as any).cleanupExpiredEntries(index);
+      const result = await (provider as BaseStorageProviderWithPrivates).cleanupExpiredEntries(index);
 
       expect(result.deletedCount).toBe(1);
       expect(result.index.entries).toHaveLength(0);
@@ -261,7 +273,7 @@ describe('BaseStorageProvider', () => {
 
       mockBackend.exists.mockResolvedValue(false);
 
-      const result = await (provider as any).cleanupExpiredEntries(index);
+      const result = await (provider as BaseStorageProviderWithPrivates).cleanupExpiredEntries(index);
 
       expect(result.deletedCount).toBe(1);
       expect(mockBackend.delete).not.toHaveBeenCalled();
@@ -282,7 +294,7 @@ describe('BaseStorageProvider', () => {
         entries: [entry],
       };
 
-      const result = await (provider as any).evictToSize(index, 5000);
+      const result = await (provider as BaseStorageProviderWithPrivates).evictToSize(index, 5000);
 
       expect(result.index.entries).toHaveLength(1);
       expect(result.toDelete).toHaveLength(0);
@@ -310,7 +322,7 @@ describe('BaseStorageProvider', () => {
         entries: [oldEntry, newEntry],
       };
 
-      const result = await (provider as any).evictToSize(index, 1500);
+      const result = await (provider as BaseStorageProviderWithPrivates).evictToSize(index, 1500);
 
       expect(result.index.entries).toHaveLength(1);
       expect(result.index.entries[0].key).toBe('new-key');
@@ -337,7 +349,7 @@ describe('BaseStorageProvider', () => {
         },
       ];
 
-      await (provider as any).deleteEvictedEntries(entries);
+      await (provider as BaseStorageProviderWithPrivates).deleteEvictedEntries(entries);
 
       expect(mockBackend.delete).toHaveBeenCalledTimes(2);
       expect(mockCore.info).toHaveBeenCalledWith(expect.stringContaining('Evicted cache entry (LRU): evicted-1'));
@@ -354,7 +366,7 @@ describe('BaseStorageProvider', () => {
 
       mockBackend.delete.mockRejectedValue(new Error('Delete failed'));
 
-      await (provider as any).deleteEvictedEntries([entry]);
+      await (provider as BaseStorageProviderWithPrivates).deleteEvictedEntries([entry]);
 
       expect(mockCore.debug).toHaveBeenCalledWith(expect.stringContaining('Failed to delete evicted archive'));
     });
@@ -378,7 +390,7 @@ describe('BaseStorageProvider', () => {
         maxCacheSizeGb: 0,
       });
 
-      const result = await (providerNoLimit as any).maybeEvict(index, 5000);
+      const result = await (providerNoLimit as BaseStorageProviderWithPrivates).maybeEvict(index, 5000);
 
       expect(result.toDelete).toHaveLength(0);
     });
@@ -393,7 +405,7 @@ describe('BaseStorageProvider', () => {
         maxCacheSizeGb: 0.001, // ~1MB
       });
 
-      const result = await (providerWithLimit as any).maybeEvict(index, 10 * 1024 * 1024); // 10MB entry
+      const result = await (providerWithLimit as BaseStorageProviderWithPrivates).maybeEvict(index, 10 * 1024 * 1024); // 10MB entry
 
       expect(result.toDelete).toHaveLength(0);
       expect(mockCore.warning).toHaveBeenCalledWith(
@@ -422,7 +434,7 @@ describe('BaseStorageProvider', () => {
         maxCacheSizeGb: 0.000001, // Very small
       });
 
-      const result = await (providerWithLimit as any).maybeEvict(index, 500);
+      const result = await (providerWithLimit as BaseStorageProviderWithPrivates).maybeEvict(index, 500);
 
       expect(result.toDelete.length).toBeGreaterThan(0);
     });
@@ -432,7 +444,7 @@ describe('BaseStorageProvider', () => {
     it('returns undefined when no TTL configured', () => {
       const providerNoTTL = new TestStorageProvider(mockBackend, mockIndexStore, mockLockManager);
 
-      const result = (providerNoTTL as any).calculateExpiresAt();
+      const result = (providerNoTTL as BaseStorageProviderWithPrivates).calculateExpiresAt();
 
       expect(result).toBeUndefined();
     });
@@ -442,7 +454,7 @@ describe('BaseStorageProvider', () => {
         ttlDays: 0,
       });
 
-      const result = (providerZeroTTL as any).calculateExpiresAt();
+      const result = (providerZeroTTL as BaseStorageProviderWithPrivates).calculateExpiresAt();
 
       expect(result).toBeUndefined();
     });
@@ -452,7 +464,7 @@ describe('BaseStorageProvider', () => {
         ttlDays: 7,
       });
 
-      const result = (providerWithTTL as any).calculateExpiresAt();
+      const result = (providerWithTTL as BaseStorageProviderWithPrivates).calculateExpiresAt();
 
       expect(result).toBeDefined();
       const expiresDate = new Date(result!);
@@ -480,7 +492,7 @@ describe('BaseStorageProvider', () => {
         entries: [entry],
       });
 
-      await (provider as any).updateAccessTimeForEntry('test-key');
+      await (provider as BaseStorageProviderWithPrivates).updateAccessTimeForEntry('test-key');
 
       expect(mockIndexStore.save).toHaveBeenCalled();
       const savedIndex = mockIndexStore.save.mock.calls[0][0] as CacheIndex;
@@ -490,7 +502,7 @@ describe('BaseStorageProvider', () => {
     it('handles errors gracefully', async () => {
       mockIndexStore.load.mockRejectedValue(new Error('Load failed'));
 
-      await (provider as any).updateAccessTimeForEntry('test-key');
+      await (provider as BaseStorageProviderWithPrivates).updateAccessTimeForEntry('test-key');
 
       expect(mockCore.debug).toHaveBeenCalledWith(expect.stringContaining('Failed to update accessedAt'));
     });
@@ -510,7 +522,7 @@ describe('BaseStorageProvider', () => {
         entries: [],
       });
 
-      await (provider as any).addEntryToIndex(newEntry);
+      await (provider as BaseStorageProviderWithPrivates).addEntryToIndex(newEntry);
 
       expect(mockIndexStore.save).toHaveBeenCalled();
       const savedIndex = mockIndexStore.save.mock.calls[0][0] as CacheIndex;
@@ -531,7 +543,7 @@ describe('BaseStorageProvider', () => {
         entries: [existingEntry],
       });
 
-      await (provider as any).addEntryToIndex(existingEntry);
+      await (provider as BaseStorageProviderWithPrivates).addEntryToIndex(existingEntry);
 
       expect(mockIndexStore.save).not.toHaveBeenCalled();
       expect(mockCore.info).toHaveBeenCalledWith(expect.stringContaining('already exists'));
@@ -558,7 +570,7 @@ describe('BaseStorageProvider', () => {
         entries: [expiredEntry],
       });
 
-      await (provider as any).addEntryToIndex(newEntry);
+      await (provider as BaseStorageProviderWithPrivates).addEntryToIndex(newEntry);
 
       expect(mockCore.info).toHaveBeenCalledWith(expect.stringContaining('Cleaned up 1 expired cache entries'));
     });
@@ -566,7 +578,7 @@ describe('BaseStorageProvider', () => {
 
   describe('deleteManifestIfLocal', () => {
     it('does not delete manifest for non-local backend', async () => {
-      await (provider as any).deleteManifestIfLocal('archives/test.tar.zst');
+      await (provider as BaseStorageProviderWithPrivates).deleteManifestIfLocal('archives/test.tar.zst');
 
       // Should not throw or call deleteManifest
       expect(mockCore.debug).not.toHaveBeenCalledWith(expect.stringContaining('Failed to delete manifest'));

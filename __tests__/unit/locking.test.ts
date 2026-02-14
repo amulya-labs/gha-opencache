@@ -1,21 +1,20 @@
 jest.mock('proper-lockfile');
-jest.mock('fs', () => ({
-  existsSync: jest.fn(),
-  writeFileSync: jest.fn(),
-}));
+jest.mock('fs');
 jest.mock('@actions/io', () => ({
   mkdirP: jest.fn().mockResolvedValue(undefined),
 }));
 
 import * as lockfile from 'proper-lockfile';
 import * as io from '@actions/io';
+import { existsSync, writeFileSync } from 'fs';
 import { acquireLock, withLock } from '../../src/storage/locking';
 import { LOCK_OPTIONS } from '../../src/constants';
 
 describe('locking', () => {
   const mockLockfile = lockfile as jest.Mocked<typeof lockfile>;
   const mockIo = io as jest.Mocked<typeof io>;
-  const fs = require('fs');
+  const mockExistsSync = existsSync as jest.MockedFunction<typeof existsSync>;
+  const mockWriteFileSync = writeFileSync as jest.MockedFunction<typeof writeFileSync>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -29,8 +28,8 @@ describe('locking', () => {
       mockRelease = jest.fn().mockResolvedValue(undefined);
       mockLockfile.lock.mockResolvedValue(mockRelease);
       mockIo.mkdirP.mockResolvedValue(undefined);
-      fs.existsSync.mockReturnValue(true);
-      fs.writeFileSync.mockReturnValue(undefined);
+      mockExistsSync.mockReturnValue(true);
+      mockWriteFileSync.mockReturnValue(undefined);
     });
 
     it('should create lock directory if it does not exist', async () => {
@@ -40,21 +39,21 @@ describe('locking', () => {
     });
 
     it('should create lock file if it does not exist', async () => {
-      fs.existsSync.mockReturnValue(false);
+      mockExistsSync.mockReturnValue(false);
 
       await acquireLock(lockPath);
 
-      expect(fs.existsSync).toHaveBeenCalledWith(lockPath);
-      expect(fs.writeFileSync).toHaveBeenCalledWith(lockPath, '');
+      expect(mockExistsSync).toHaveBeenCalledWith(lockPath);
+      expect(mockWriteFileSync).toHaveBeenCalledWith(lockPath, '');
     });
 
     it('should not create lock file if it already exists', async () => {
-      fs.existsSync.mockReturnValue(true);
+      mockExistsSync.mockReturnValue(true);
 
       await acquireLock(lockPath);
 
-      expect(fs.existsSync).toHaveBeenCalledWith(lockPath);
-      expect(fs.writeFileSync).not.toHaveBeenCalled();
+      expect(mockExistsSync).toHaveBeenCalledWith(lockPath);
+      expect(mockWriteFileSync).not.toHaveBeenCalled();
     });
 
     it('should acquire lock with correct options', async () => {
@@ -103,8 +102,8 @@ describe('locking', () => {
       mockRelease = jest.fn().mockResolvedValue(undefined);
       mockLockfile.lock.mockResolvedValue(mockRelease);
       mockIo.mkdirP.mockResolvedValue(undefined);
-      fs.existsSync.mockReturnValue(true);
-      fs.writeFileSync.mockReturnValue(undefined);
+      mockExistsSync.mockReturnValue(true);
+      mockWriteFileSync.mockReturnValue(undefined);
     });
 
     it('should execute function with lock acquired', async () => {
@@ -246,8 +245,8 @@ describe('locking', () => {
       mockRelease = jest.fn().mockResolvedValue(undefined);
       mockLockfile.lock.mockResolvedValue(mockRelease);
       mockIo.mkdirP.mockResolvedValue(undefined);
-      fs.existsSync.mockReturnValue(false);
-      fs.writeFileSync.mockReturnValue(undefined);
+      mockExistsSync.mockReturnValue(false);
+      mockWriteFileSync.mockReturnValue(undefined);
     });
 
     it('should handle complete lock workflow', async () => {
@@ -262,7 +261,7 @@ describe('locking', () => {
       const result = await withLock(lockPath, fn);
 
       expect(mockIo.mkdirP).toHaveBeenCalledWith('/cache/index');
-      expect(fs.writeFileSync).toHaveBeenCalledWith(lockPath, '');
+      expect(mockWriteFileSync).toHaveBeenCalledWith(lockPath, '');
       expect(mockLockfile.lock).toHaveBeenCalledWith(lockPath, LOCK_OPTIONS);
       expect(operations).toContain('critical-section');
       expect(mockRelease).toHaveBeenCalled();
