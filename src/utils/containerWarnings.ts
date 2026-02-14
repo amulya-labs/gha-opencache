@@ -67,11 +67,11 @@ export function maybeWarnContainerConfig(inputs: RestoreInputs): void {
 
     // Use appropriate severity based on mount status
     if (mountStatus === 'mounted') {
-      core.info(message);  // Reassurance - everything is OK
+      core.info(message); // Reassurance - everything is OK
     } else if (mountStatus === 'not-mounted') {
-      core.warning(message);  // Problem detected
+      core.warning(message); // Problem detected
     } else {
-      core.notice(message);  // Unknown status - verification needed
+      core.notice(message); // Unknown status - verification needed
     }
   } else {
     // User is using default path (common v1→v2 upgrade issue)

@@ -123,8 +123,8 @@ export async function readManifest(archivePath: string): Promise<ArchiveManifest
 
       core.warning(
         `Invalid manifest format: ${manifestPath}\n` +
-        `Missing fields: ${missing.join(', ')}\n` +
-        `Cache entry will be ignored. To fix: rm ${manifestPath}`
+          `Missing fields: ${missing.join(', ')}\n` +
+          `Cache entry will be ignored. To fix: rm ${manifestPath}`
       );
       return undefined;
     }
@@ -133,7 +133,7 @@ export async function readManifest(archivePath: string): Promise<ArchiveManifest
     if (manifest.version !== MANIFEST_VERSION) {
       core.warning(
         `Incompatible manifest version: ${manifest.version} (expected: ${MANIFEST_VERSION}): ${manifestPath}\n` +
-        `Cache entry will be ignored. Re-save cache to update to current version.`
+          `Cache entry will be ignored. Re-save cache to update to current version.`
       );
       return undefined;
     }
@@ -142,7 +142,7 @@ export async function readManifest(archivePath: string): Promise<ArchiveManifest
   } catch (err) {
     core.warning(
       `Failed to read manifest ${manifestPath}: ${err}\n` +
-      `Cache entry will not be available. Consider removing corrupted file: rm ${manifestPath}`
+        `Cache entry will not be available. Consider removing corrupted file: rm ${manifestPath}`
     );
     return undefined;
   }

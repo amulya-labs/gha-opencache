@@ -45,8 +45,8 @@ export async function saveCache(stateProvider: IStateProvider): Promise<SaveResu
     const errorMessage = error instanceof Error ? error.message : String(error);
     core.warning(
       `Failed to save cache after restore: ${errorMessage}\n` +
-      `Key: ${primaryKey}\n` +
-      `This cache will not be available for future workflow runs.`
+        `Key: ${primaryKey}\n` +
+        `This cache will not be available for future workflow runs.`
     );
     return { saved: false, key: primaryKey };
   }
@@ -71,8 +71,8 @@ export async function saveCacheOnly(): Promise<SaveResult> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     core.warning(
       `Failed to save cache: ${errorMessage}\n` +
-      `Key: ${inputs.key}\n` +
-      `Verify cache path is writable and storage provider is configured correctly.`
+        `Key: ${inputs.key}\n` +
+        `Verify cache path is writable and storage provider is configured correctly.`
     );
     return { saved: false, key: inputs.key };
   }

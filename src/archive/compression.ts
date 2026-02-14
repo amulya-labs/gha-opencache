@@ -76,7 +76,7 @@ export async function resolveCompressionMethod(
     if (clampedLevel !== level) {
       core.warning(
         `Invalid zstd compression level ${level} (valid: 1-19). Using ${clampedLevel}.\n` +
-        `Tip: Lower (1-3) = faster, higher (10-19) = better compression.`
+          `Tip: Lower (1-3) = faster, higher (10-19) = better compression.`
       );
     }
     level = clampedLevel;
@@ -88,7 +88,7 @@ export async function resolveCompressionMethod(
     if (clampedLevel !== level) {
       core.warning(
         `Invalid gzip compression level ${level} (valid: 1-9). Using ${clampedLevel}.\n` +
-        `Tip: Lower (1-3) = faster, higher (7-9) = better compression.`
+          `Tip: Lower (1-3) = faster, higher (7-9) = better compression.`
       );
     }
     level = clampedLevel;
