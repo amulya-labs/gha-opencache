@@ -1,8 +1,10 @@
 <h1 align="center">OpenCache Actions</h1>
 
 <p align="center">
-  <strong><a href="https://github.com/amulya-labs/gha-opencache">📦 GitHub Repository</a></strong> • <strong><a href="CONTRIBUTING.md">🤝 Contributing</a></strong>
+  <strong><a href="https://github.com/amulya-labs/gha-opencache">📦 Open-source GitHub Repository</a></strong> • <strong><a href="CONTRIBUTING.md">🤝 Contributing Guide</a></strong>
 </p>
+
+---
 
 [![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
