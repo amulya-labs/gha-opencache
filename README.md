@@ -3,7 +3,23 @@
 <h2>OpenCache Actions</h2>
 
 <p>
-  <strong>Drop-in replacement for <code>actions/cache</code></strong> that lets you choose where your CI caches live.
+
+[![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amulya-labs/gha-opencache/badge)](https://securityscorecards.dev/viewer/?uri=github.com/amulya-labs/gha-opencache)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11945/badge)](https://www.bestpractices.dev/projects/11945)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</p>
+
+<p>
+  <strong><a href="https://github.com/amulya-labs/gha-opencache">📦 Open-source GitHub Repository</a></strong> • <strong><a href="CONTRIBUTING.md">🤝 Contributing Guide</a></strong>
+</p>
+
+---
+
+<p>
+  Fast, configurable drop-in replacement for <strong><code><a href="https://github.com/actions/cache">actions/cache</code></strong> that lets you choose where your CI caches live.
 </p>
 
 <p>
@@ -16,27 +32,12 @@
   <strong>without changing your workflow syntax</strong> and without vendor lock-in.
 </p>
 
-<p>
-  <strong><a href="https://github.com/amulya-labs/gha-opencache">📦 Open-source GitHub Repository</a></strong> • <strong><a href="CONTRIBUTING.md">🤝 Contributing Guide</a></strong>
-</p>
-
----
-
-<p>
-
-[![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amulya-labs/gha-opencache/badge)](https://securityscorecards.dev/viewer/?uri=github.com/amulya-labs/gha-opencache)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11945/badge)](https://www.bestpractices.dev/projects/11945)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-</p>
-
-> 💡 **We welcome open-source contributions!** Whether you're fixing bugs, adding features, or improving documentation, we'd love your help.
-
 </div>
 
 ---
+
+> 💡 **We welcome open-source contributions!** Whether you're fixing bugs, adding features, or improving documentation, we'd love your help.
+
 
 ## Quick Start
 
