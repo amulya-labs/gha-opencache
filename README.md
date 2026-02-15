@@ -1,10 +1,8 @@
-<h1 align="center">OpenCache Actions</h1>
+<div align="center">
 
-<p align="center">
-  <strong><a href="https://github.com/amulya-labs/gha-opencache">📦 Open-source GitHub Repository</a></strong> • <strong><a href="CONTRIBUTING.md">🤝 Contributing Guide</a></strong>
-</p>
+<h2>OpenCache Actions</h2>
 
----
+<p>
 
 [![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/amulya-labs/gha-opencache/branch/main/graph/badge.svg)](https://codecov.io/gh/amulya-labs/gha-opencache)
@@ -12,13 +10,34 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11945/badge)](https://www.bestpractices.dev/projects/11945)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Fast, configurable drop-in replacement for [`actions/cache`](https://github.com/actions/cache) with pluggable backends (local disk, S3-compatible, Google Cloud Storage).
+</p>
 
-> **OpenCache Actions** gives you full control over where and how your GitHub Actions caches are stored — without changing your workflow.
->
-> 💡 **We welcome open-source contributions!** Whether you're fixing bugs, adding features, or improving documentation, we'd love your help.
+<p>
+  <strong><a href="https://github.com/amulya-labs/gha-opencache">📦 Open-source GitHub Repository</a></strong> • <strong><a href="CONTRIBUTING.md">🤝 Contributing Guide</a></strong>
+</p>
 
 ---
+
+<p>
+  Fast, configurable drop-in replacement for <strong><code><a href="https://github.com/actions/cache">actions/cache</code></strong> that lets you choose where your CI caches live.
+</p>
+
+<p>
+  Use <strong>local disk</strong> on self-hosted runners for disk-speed restores, or store caches in
+  <strong>S3-compatible object storage</strong> (AWS S3, MinIO, R2, Spaces) or <strong>Google Cloud Storage</strong>.
+</p>
+
+<p>
+  Faster pipelines, predictable performance, and <strong>full control</strong> over cache behavior (TTL, size limits, compression) —
+  <strong>without changing your workflow syntax</strong> and without vendor lock-in.
+</p>
+
+</div>
+
+---
+
+> 💡 **We welcome open-source contributions!** Whether you're fixing bugs, adding features, or improving documentation, we'd love your help.
+
 
 ## Quick Start
 
