@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <em>Speed up your CI/CD pipelines by caching dependencies and build artifacts—without relying on GitHub's servers.</em>
+  <em>Speed up your CI/CD pipelines by 2-10x with local caching—without relying on GitHub's servers.</em>
 </p>
 
 <p align="center">
-OpenCache Actions stores your build caches wherever you want: on your own servers, in S3, or in Google Cloud Storage. This means faster builds for self-hosted runners (no network round-trips) and full control over your cache storage. Drop it into your existing workflows with zero configuration changes.
+OpenCache Actions stores your build caches wherever you want: <strong>local file storage</strong>, your own servers, S3, or Google Cloud Storage. Self-hosted runners with local storage can see <strong>5-10x faster cache operations</strong> (seconds instead of minutes), while cloud storage setups typically gain <strong>2-3x speed improvements</strong>. Drop it into your existing workflows with zero configuration changes—full control, zero vendor lock-in.
 </p>
 
 ---
