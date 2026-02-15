@@ -89,6 +89,13 @@ jobs:
 
           echo "✅ No common issues found"
 
+      - name: Verify workflow action SHAs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x scripts/verify-workflow-shas.sh
+          ./scripts/verify-workflow-shas.sh
+
       - name: Validate example consistency
         run: |
           echo "Checking example consistency..."
@@ -264,7 +271,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@0f8570b1a125f4937846a11fcfa3bcd548bd8c97  # v4.6.0
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238  # v4.6.0
         with:
           files: ./coverage/lcov.info
           flags: unittests
