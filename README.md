@@ -100,6 +100,8 @@
 
 ## vs [`actions/cache`](https://github.com/actions/cache)
 
+<div align="center">
+
 | Feature                      | `actions/cache` | OpenCache Actions |
 | ---------------------------- | :-------------: | :---------------: |
 | API compatible               |       ✅        |        ✅         |
@@ -113,6 +115,9 @@
 | Compression options          |       ✔️        |        ✅         |
 | Self-healing index           |       ❌        |        ✅         |
 
+</div>
+
+
 **Legend**
 
 - ⚠️ = works, but with limitations
@@ -123,6 +128,8 @@
   > only `zstd` is available in `actions/cache`
 
 ## Options
+
+<div align="center">
 
 | Input                                  | Description                                    | Default                    |
 | -------------------------------------- | ---------------------------------------------- | -------------------------- |
@@ -155,6 +162,9 @@
 | `ttl-days`                             | Days until cache expires (0 = never)           | `7`                        |
 | `max-cache-size-gb`                    | Max size per repo in GB (0 = unlimited)        | `10`                       |
 
+</div>
+
+
 - Platform-specific defaults: Linux: `$HOME/.cache/gha-opencache` (respects `XDG_CACHE_HOME` when set), macOS: `~/Library/Caches/gha-opencache`, Windows: `%LOCALAPPDATA%\gha-opencache`. Override with `OPENCACHE_PATH` env var.
 
 **Environment variables for cloud storage:**
@@ -164,11 +174,16 @@
 
 ## Outputs
 
+<div align="center">
+
 | Output              | Description                                      |
 | ------------------- | ------------------------------------------------ |
 | `cache-hit`         | `true` if exact match found for primary key      |
 | `cache-primary-key` | The primary key that was used                    |
 | `cache-matched-key` | Key of restored cache (may be unset if no match) |
+
+</div>
+
 
 ## restore-keys Behavior
 
@@ -240,12 +255,17 @@ restore-keys: python-
 
 ## Compression
 
+<div align="center">
+
 | Method           | Speed    | Ratio     | When to Use                       |
 | ---------------- | -------- | --------- | --------------------------------- |
 | `auto` (default) | -        | -         | Detects zstd → falls back to gzip |
 | `zstd`           | Fast     | Excellent | Best for most cases               |
 | `gzip`           | Moderate | Good      | Maximum compatibility             |
 | `none`           | Fastest  | N/A       | Pre-compressed files              |
+
+</div>
+
 
 **Levels:** zstd 1-19 (default: 3), gzip 1-9 (default: 6)
 
