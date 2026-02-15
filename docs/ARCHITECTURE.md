@@ -13,12 +13,17 @@ The cache automatically recovers from index corruption:
 
 ### Recovery Scenarios
 
+<div align="center">
+
 | Scenario | Recovery |
 |----------|----------|
 | Corrupted `index.json` | Automatic rebuild from manifests |
 | Missing `index.json` | Rebuild if manifests exist, else empty |
 | Interrupted save | Temp files ignored, cleaned after 1 hour |
 | Partial manifest | Entry skipped, others recovered |
+
+</div>
+
 
 ## Lock-Free Archive Creation
 

@@ -4,9 +4,14 @@
 
 We actively support the following versions with security updates:
 
+<div align="center">
+
 | Version | Supported          |
 | ------- | ------------------ |
 | 1.x     | :white_check_mark: |
+
+</div>
+
 
 ## Reporting a Vulnerability
 
