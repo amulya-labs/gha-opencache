@@ -4,6 +4,14 @@
   <strong><a href="https://github.com/amulya-labs/gha-opencache">📦 Open-source GitHub Repository</a></strong> • <strong><a href="CONTRIBUTING.md">🤝 Contributing Guide</a></strong>
 </p>
 
+<p align="center">
+  <em>Speed up your CI/CD pipelines by caching dependencies and build artifacts—without relying on GitHub's servers.</em>
+</p>
+
+<p align="center">
+OpenCache Actions stores your build caches wherever you want: on your own servers, in S3, or in Google Cloud Storage. This means faster builds for self-hosted runners (no network round-trips) and full control over your cache storage. Drop it into your existing workflows with zero configuration changes.
+</p>
+
 ---
 
 [![CI](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml/badge.svg)](https://github.com/amulya-labs/gha-opencache/actions/workflows/ci.yml)
