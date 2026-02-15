@@ -73,8 +73,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@5a775b367a56d5bd118a224a811bba288150a563 # v2.0.0
     with:
       base64-subjects: "${{ needs.build-artifacts.outputs.hashes }}"
-      upload-assets: true
-      upload-tag-name: ${{ github.ref_name }}
+      upload-assets: false
 
   upload-assets:
     name: Upload Release Assets
@@ -87,6 +86,11 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-artifacts
+
+      - name: Download provenance
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.provenance.outputs.provenance-name }}
 
       - name: Upload release assets
         env:
@@ -106,6 +110,11 @@ jobs:
           # Upload checksums
           gh release upload ${{ github.ref_name }} \
             checksums.txt \
+            --clobber
+          
+          # Upload SLSA provenance attestation
+          gh release upload ${{ github.ref_name }} \
+            *.intoto.jsonl \
             --clobber
 
       - name: Verify release assets
