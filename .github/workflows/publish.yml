@@ -1,0 +1,55 @@
+# This workflow publishes the package to npm registries
+# It's designed to be detected by OpenSSF Scorecard's Packaging check
+# which looks for: actions/setup-node + npm.*publish pattern
+
+name: Publish Package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-npm:
+    name: Publish to GitHub Packages
+    runs-on: ubuntu-latest
+    # Only publish stable releases (not prereleases)
+    if: ${{ !github.event.release.prerelease }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@amulya-labs'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure package for publishing
+        run: |
+          # Extract version from release tag (remove 'v' prefix)
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+
+          # Configure package.json for GitHub Packages
+          jq --arg version "$VERSION" \
+              '.name = "@amulya-labs/gha-opencache" |
+              .version = $version |
+              .repository.url = "git+https://github.com/amulya-labs/gha-opencache.git" |
+              .publishConfig = {"registry": "https://npm.pkg.github.com"}' \
+            package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+          echo "Publishing version: $VERSION"
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

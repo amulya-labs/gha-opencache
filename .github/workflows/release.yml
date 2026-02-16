@@ -179,52 +179,9 @@ jobs:
             exit 1
           fi
 
-  publish-package:
-    name: Publish to GitHub Packages
-    needs: [build-artifacts, provenance]
-    runs-on: ubuntu-latest
-    # Only publish releases with semver-like tags (contain '.'), skip floating tags (v1) and prereleases (v1.2.3-rc.1)
-    if: ${{ contains(github.ref_name, '.') && !contains(github.ref_name, '-') }}
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
-        with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@amulya-labs'
-
-      - name: Configure package for GitHub Packages
-        run: |
-          # Extract version from tag (remove 'v' prefix)
-          VERSION="${GITHUB_REF_NAME#v}"
-
-          # Modify package.json for GitHub Packages publishing
-          # Note: This is intentionally done at publish-time (not in source) to keep
-          # the source package.json clean and avoid registry-specific configuration
-          # in the repository. The published package metadata will differ from source.
-          jq --arg version "$VERSION" \
-              '.name = "@amulya-labs/gha-opencache" |
-              .version = $version |
-              .repository.url = "git+https://github.com/amulya-labs/gha-opencache.git" |
-              .publishConfig = {"registry": "https://npm.pkg.github.com"}' \
-            package.json > package.json.tmp
-          mv package.json.tmp package.json
-
-          echo "Publishing version: $VERSION"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Publish to GitHub Packages
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # NOTE: npm publishing is handled by .github/workflows/publish.yml
+  # which triggers on release:published event. This keeps concerns separated
+  # and provides clearer detection for OpenSSF Scorecard's Packaging check.
 
   update-major-tag:
     name: Update Floating Major Version Tag
