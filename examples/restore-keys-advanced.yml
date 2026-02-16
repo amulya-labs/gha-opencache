@@ -34,7 +34,7 @@ jobs:
           node-version: '20'
 
       - name: Cache with branch hierarchy
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: node_modules
           # Primary: exact match for this branch + lockfile
@@ -76,7 +76,7 @@ jobs:
           node-version: '20'
 
       - name: Cache root dependencies
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: node_modules
           key: root-deps-${{ hashFiles('package-lock.json') }}
@@ -84,7 +84,7 @@ jobs:
             root-deps-
 
       - name: Cache workspace A
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: packages/app-a/node_modules
           # Include both workspace and root lockfiles
@@ -94,7 +94,7 @@ jobs:
             workspace-a-
 
       - name: Cache workspace B
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: packages/app-b/node_modules
           key: workspace-b-${{ hashFiles('packages/app-b/package.json', 'package-lock.json') }}
@@ -124,7 +124,7 @@ jobs:
           python-version: '3.11'
 
       - name: Cache with graceful dependency updates
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: ~/.cache/pip
           # Primary: exact requirements.txt hash
@@ -160,7 +160,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cache with platform fallback
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: ~/.cargo
           # Primary: exact OS, arch, and lockfile
@@ -197,7 +197,7 @@ jobs:
         run: echo "number=$(date +%U)" >> "$GITHUB_OUTPUT"
 
       - name: Cache with weekly rotation
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: ~/.npm
           # Primary: current week + lockfile

@@ -52,7 +52,7 @@ jobs:
       # Cache node_modules using GCS with Workload Identity
       - name: Cache npm dependencies
         id: cache
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
