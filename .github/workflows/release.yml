@@ -75,7 +75,6 @@ jobs:
     with:
       base64-subjects: "${{ needs.build-artifacts.outputs.hashes }}"
       upload-assets: false
-      private-repository: true
 
   upload-assets:
     name: Upload Release Assets
