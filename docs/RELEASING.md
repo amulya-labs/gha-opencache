@@ -76,9 +76,9 @@ Users referencing `@v3` automatically get the latest compatible version. The ent
 
 ## Versioning
 
-- **MAJOR** (`v3.0.0`): Breaking changes
-- **MINOR** (`v3.1.0`): New features, backward compatible
-- **PATCH** (`v3.0.1`): Bug fixes
+- **MAJOR** (`vX.0.0`): Breaking changes
+- **MINOR** (`vX.1.0`): New features, backward compatible
+- **PATCH** (`vX.0.1`): Bug fixes
 
 Users reference `@v3` (floating tag) to get compatible updates automatically.
 

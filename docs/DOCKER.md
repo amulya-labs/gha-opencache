@@ -156,7 +156,7 @@ If you're upgrading from `gha-opencache@v1` and use containers, you **must** add
     # No cache-path needed - v1 defaulted to /srv/gha-cache
 ```
 
-### After (v2 - requires explicit cache-path)
+### After (v2+ - requires explicit cache-path)
 
 ```yaml
 - uses: amulya-labs/gha-opencache@v3
