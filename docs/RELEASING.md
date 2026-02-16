@@ -53,8 +53,10 @@ When you push a version tag, the **release workflow** automatically:
 1. **build-artifacts** - Compiles and packages the action
 2. **provenance** - Generates SLSA Level 3 attestation
 3. **upload-assets** - Creates a draft release, uploads artifacts, then publishes
-4. **publish-package** - Publishes to GitHub Packages (npm, stable releases only)
-5. **update-major-tag** - Updates floating tag (e.g., `v3` → `v3.0.1`)
+4. **update-major-tag** - Updates floating tag (e.g., `v3` → `v3.0.1`)
+
+Once the release is published, a separate **publish workflow** (`publish.yml`) automatically:
+- **publish-npm** - Publishes to GitHub Packages (npm, stable releases only)
 
 **Generated Artifacts:**
 - Source tarball (`gha-opencache-vX.Y.Z.tar.gz`)
@@ -109,10 +111,12 @@ gh pr list --state merged --base main --limit 10
 - `packages: write` - Publish to GitHub Packages
 
 **Workflow Structure:**
-The workflow triggers on tag push (`v*`). Jobs run in parallel where possible, with `upload-assets` and `publish-package` waiting for artifact generation and provenance. The `upload-assets` job creates a draft release, uploads all assets including SLSA provenance, then publishes the release. This pattern avoids "immutable release" errors that occur when trying to upload to already-published releases.
+Two workflows handle releases:
+1. `release.yml` triggers on tag push (`v*`). Jobs run in parallel where possible, with `upload-assets` waiting for artifact generation and provenance. The `upload-assets` job creates a draft release, uploads all assets including SLSA provenance, then publishes the release. This pattern avoids "immutable release" errors that occur when trying to upload to already-published releases.
+2. `publish.yml` triggers on `release:published` events. This separation improves OpenSSF Scorecard detection and ensures npm publishing only occurs after the release is fully published.
 
 **GitHub Packages Publishing:**
-The `publish-package` job modifies `package.json` at publish-time to configure the scoped package name and registry. This is intentional to keep the source `package.json` clean and avoid registry-specific configuration in the repository. The published package metadata will differ from the source repository.
+The `publish.yml` workflow modifies `package.json` at publish-time to configure the scoped package name and registry. This is intentional to keep the source `package.json` clean and avoid registry-specific configuration in the repository. The published package metadata will differ from the source repository.
 
 ### Emergency Hotfix
 
