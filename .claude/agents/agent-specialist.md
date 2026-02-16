@@ -2,6 +2,7 @@
 name: agent-specialist
 description: Design, build, and optimize AI agents with strong output contracts, guardrails, and behavioral consistency. Use when creating or improving agent prompts.
 source: https://github.com/amulya-labs/claude-agents
+license: MIT
 model: opus
 color: yellow
 ---

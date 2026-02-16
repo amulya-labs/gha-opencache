@@ -2,6 +2,7 @@
 name: debugger
 description: Investigate and fix bugs systematically using root cause analysis. Use when troubleshooting errors, unexpected behavior, or system failures.
 source: https://github.com/amulya-labs/claude-agents
+license: MIT
 model: opus
 color: red
 ---

@@ -1,6 +1,9 @@
 # Bash command validation patterns for Claude Code PreToolUse hook
 # Patterns are regular expressions matched against commands
 #
+# Source: https://github.com/amulya-labs/claude-agents
+# License: MIT (https://opensource.org/licenses/MIT)
+#
 # Categories:
 #   [deny.*]  - Always block, no user override (catastrophic/irreversible)
 #   [ask.*]   - Prompt user for confirmation (risky but sometimes needed)

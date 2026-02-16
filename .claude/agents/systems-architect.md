@@ -2,6 +2,7 @@
 name: systems-architect
 description: Provide high-level architectural guidance on system design, component interactions, data flows, and change impact analysis. Use for architecture questions, not implementation details.
 source: https://github.com/amulya-labs/claude-agents
+license: MIT
 model: opus
 color: purple
 ---

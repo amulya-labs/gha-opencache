@@ -2,6 +2,7 @@
 name: tech-lead
 description: Plan implementation approaches and break down complex tasks. Use for scoping work, creating implementation plans, and making technical decisions. Does not write code.
 source: https://github.com/amulya-labs/claude-agents
+license: MIT
 model: opus
 color: magenta
 ---

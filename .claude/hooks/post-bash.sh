@@ -1,6 +1,9 @@
 #!/bin/bash
 # Claude Code PostToolUse hook for Bash commands
 # Logs ASK command outcomes (approved)
+#
+# Source: https://github.com/amulya-labs/claude-agents
+# License: MIT (https://opensource.org/licenses/MIT)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/bash-patterns.toml"

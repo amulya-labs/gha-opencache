@@ -2,6 +2,9 @@
 """
 Bash command validator for Claude Code PreToolUse hook.
 Reads patterns from TOML config and validates commands.
+
+Source: https://github.com/amulya-labs/claude-agents
+License: MIT (https://opensource.org/licenses/MIT)
 """
 
 import json
