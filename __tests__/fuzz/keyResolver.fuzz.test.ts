@@ -61,9 +61,9 @@ describe('Key Resolver Fuzz Tests', () => {
 
     it('should find entry when key exists', () => {
       fc.assert(
-        fc.property(cacheIndexArb, index => {
+        fc.property(cacheIndexArb, fc.nat(), (index, randomIndex) => {
           if (index.entries.length === 0) return true;
-          const randomEntry = index.entries[Math.floor(Math.random() * index.entries.length)];
+          const randomEntry = index.entries[randomIndex % index.entries.length];
           const result = findEntry(index, randomEntry.key);
           expect(result?.key).toBe(randomEntry.key);
           return true;
@@ -327,15 +327,25 @@ describe('Key Resolver Fuzz Tests', () => {
 
   describe('resolveKey', () => {
     it('exact match should return isExactMatch true', () => {
-      fc.assert(
-        fc.property(cacheIndexArb, index => {
-          if (index.entries.length === 0) return true;
-          // Pick a non-expired entry
-          const now = new Date();
-          const validEntries = index.entries.filter(e => !isExpired(e, now));
-          if (validEntries.length === 0) return true;
+      // Create entries without expiration to avoid timing issues
+      // (resolveKey uses new Date() internally)
+      const nonExpiringEntryArb = fc.record({
+        key: fc.string({ minLength: 1 }),
+        archivePath: fc.string({ minLength: 1 }),
+        createdAt: isoDateArb,
+        sizeBytes: fc.nat({ max: 1_000_000_000 }),
+        expiresAt: fc.constant(undefined),
+        accessedAt: fc.option(isoDateArb, { nil: undefined }),
+      });
 
-          const targetEntry = validEntries[0];
+      const nonExpiringIndexArb = fc.record({
+        version: fc.constant('2'),
+        entries: fc.array(nonExpiringEntryArb, { minLength: 1, maxLength: 100 }),
+      });
+
+      fc.assert(
+        fc.property(nonExpiringIndexArb, fc.nat(), (index, randomIndex) => {
+          const targetEntry = index.entries[randomIndex % index.entries.length];
           const result = resolveKey(index, targetEntry.key, []);
 
           expect(result.isExactMatch).toBe(true);
@@ -365,15 +375,25 @@ describe('Key Resolver Fuzz Tests', () => {
     });
 
     it('restore keys should find prefix matches', () => {
+      // Create entries without expiration to avoid timing issues
+      // (resolveKey uses new Date() internally)
+      const nonExpiringEntryArb = fc.record({
+        key: fc.string({ minLength: 1 }),
+        archivePath: fc.string({ minLength: 1 }),
+        createdAt: isoDateArb,
+        sizeBytes: fc.nat({ max: 1_000_000_000 }),
+        expiresAt: fc.constant(undefined),
+        accessedAt: fc.option(isoDateArb, { nil: undefined }),
+      });
+
+      const nonExpiringIndexArb = fc.record({
+        version: fc.constant('2'),
+        entries: fc.array(nonExpiringEntryArb, { minLength: 1, maxLength: 100 }),
+      });
+
       fc.assert(
-        fc.property(cacheIndexArb, index => {
-          if (index.entries.length === 0) return true;
-
-          const now = new Date();
-          const validEntries = index.entries.filter(e => !isExpired(e, now));
-          if (validEntries.length === 0) return true;
-
-          const targetEntry = validEntries[0];
+        fc.property(nonExpiringIndexArb, fc.nat(), (index, randomIndex) => {
+          const targetEntry = index.entries[randomIndex % index.entries.length];
           const prefix = targetEntry.key.slice(0, Math.max(1, targetEntry.key.length - 1));
 
           // Use a key that definitely doesn't exist for primary
@@ -449,11 +469,11 @@ describe('Edge Case Fuzz Tests', () => {
   describe('special characters in keys', () => {
     it('should handle unicode characters in keys', () => {
       fc.assert(
-        fc.property(fc.string({ minLength: 1, unit: 'grapheme' }), key => {
+        fc.property(fc.string({ minLength: 1, unit: 'grapheme' }), isoDateArb, (key, createdAt) => {
           const entry: CacheEntry = {
             key,
             archivePath: '/test',
-            createdAt: new Date().toISOString(),
+            createdAt,
             sizeBytes: 100,
           };
           const index = addEntry(createEmptyIndex(), entry);
@@ -466,11 +486,11 @@ describe('Edge Case Fuzz Tests', () => {
 
     it('should handle special characters in keys', () => {
       fc.assert(
-        fc.property(fc.string({ minLength: 1, unit: 'binary' }), key => {
+        fc.property(fc.string({ minLength: 1, unit: 'binary' }), isoDateArb, (key, createdAt) => {
           const entry: CacheEntry = {
             key,
             archivePath: '/test',
-            createdAt: new Date().toISOString(),
+            createdAt,
             sizeBytes: 100,
           };
           const index = addEntry(createEmptyIndex(), entry);
@@ -485,11 +505,11 @@ describe('Edge Case Fuzz Tests', () => {
   describe('boundary values', () => {
     it('should handle maximum size bytes', () => {
       fc.assert(
-        fc.property(fc.nat({ max: Number.MAX_SAFE_INTEGER }), size => {
+        fc.property(fc.nat({ max: Number.MAX_SAFE_INTEGER }), isoDateArb, (size, createdAt) => {
           const entry: CacheEntry = {
             key: 'test',
             archivePath: '/test',
-            createdAt: new Date().toISOString(),
+            createdAt,
             sizeBytes: size,
           };
           const index = addEntry(createEmptyIndex(), entry);
@@ -500,16 +520,28 @@ describe('Edge Case Fuzz Tests', () => {
     });
 
     it('should handle empty strings as restore keys', () => {
+      // Create entries without expiration to avoid timing issues
+      // (resolveKey uses new Date() internally)
+      const nonExpiringEntryArb = fc.record({
+        key: fc.string({ minLength: 1 }),
+        archivePath: fc.string({ minLength: 1 }),
+        createdAt: isoDateArb,
+        sizeBytes: fc.nat({ max: 1_000_000_000 }),
+        expiresAt: fc.constant(undefined),
+        accessedAt: fc.option(isoDateArb, { nil: undefined }),
+      });
+
+      const nonExpiringIndexArb = fc.record({
+        version: fc.constant('2'),
+        entries: fc.array(nonExpiringEntryArb, { minLength: 1, maxLength: 100 }),
+      });
+
       fc.assert(
-        fc.property(cacheIndexArb, index => {
+        fc.property(nonExpiringIndexArb, index => {
           // Empty restore key should match all entries as prefix
           const result = resolveKey(index, 'nonexistent-primary-key', ['']);
-          // If there are valid entries, should find one
-          const now = new Date();
-          const validEntries = index.entries.filter(e => !isExpired(e, now));
-          if (validEntries.length > 0) {
-            expect(result.entry).toBeDefined();
-          }
+          // With non-expiring entries, should always find one
+          expect(result.entry).toBeDefined();
         }),
         { numRuns: 200 }
       );
