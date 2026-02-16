@@ -1,7 +1,7 @@
 ---
 name: test-engineer
 description: Design and implement comprehensive test suites including unit, integration, and e2e tests. Use when you need thorough test coverage or testing strategy guidance.
-source: https://github.com/rrlamichhane/claude-agents
+source: https://github.com/amulya-labs/claude-agents
 color: blue
 ---
 

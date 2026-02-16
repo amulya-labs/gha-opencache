@@ -1,7 +1,7 @@
 ---
 name: pr-refiner
 description: Refine PRs based on review feedback. Use when receiving PR reviews, addressing reviewer comments, or systematically working through code review feedback.
-source: https://github.com/rrlamichhane/claude-agents
+source: https://github.com/amulya-labs/claude-agents
 color: green
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: prompt-engineer
 description: Engineer effective prompts for AI models. Asks clarifying questions to understand requirements, then crafts concise, well-organized prompts optimized for the target model.
-source: https://github.com/rrlamichhane/claude-agents
+source: https://github.com/amulya-labs/claude-agents
 model: opus
 color: cyan
 ---

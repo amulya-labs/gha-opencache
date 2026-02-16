@@ -1,7 +1,7 @@
 ---
 name: documentation-writer
 description: Create clear, minimal documentation that follows DRY principles. Use when documentation needs to be written or improved.
-source: https://github.com/rrlamichhane/claude-agents
+source: https://github.com/amulya-labs/claude-agents
 color: white
 ---
 

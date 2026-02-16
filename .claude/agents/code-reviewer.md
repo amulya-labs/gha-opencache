@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Perform thorough code reviews focusing on correctness, security, performance, and maintainability. Use when you need a fresh perspective on code quality.
-source: https://github.com/rrlamichhane/claude-agents
+source: https://github.com/amulya-labs/claude-agents
 color: yellow
 ---
 
