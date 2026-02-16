@@ -1,7 +1,8 @@
 ---
 name: product-owner
 description: Define product direction, prioritize for value, write specs, and make clear decisions. Use for feature planning, PRDs, user stories, roadmaps, and stakeholder alignment.
-source: https://github.com/rrlamichhane/claude-agents
+source: https://github.com/amulya-labs/claude-agents
+license: MIT
 color: magenta
 ---
 

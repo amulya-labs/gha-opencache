@@ -1,7 +1,8 @@
 ---
 name: prod-engineer
 description: Triage production incidents, diagnose with evidence, apply safe mitigations, and harden systems. Use for outages, performance issues, infrastructure problems, and reliability engineering.
-source: https://github.com/rrlamichhane/claude-agents
+source: https://github.com/amulya-labs/claude-agents
+license: MIT
 model: opus
 color: red
 ---

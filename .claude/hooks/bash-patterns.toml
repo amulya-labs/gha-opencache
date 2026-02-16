@@ -1,0 +1,935 @@
+# Bash command validation patterns for Claude Code PreToolUse hook
+# Patterns are regular expressions matched against commands
+#
+# Source: https://github.com/amulya-labs/claude-agents
+# License: MIT (https://opensource.org/licenses/MIT)
+#
+# Categories:
+#   [deny.*]  - Always block, no user override (catastrophic/irreversible)
+#   [ask.*]   - Prompt user for confirmation (risky but sometimes needed)
+#   [allow.*] - Auto-approve (safe operations)
+#
+# Evaluation order: deny -> ask -> allow -> ask (if no match)
+
+# =============================================================================
+# DENY PATTERNS - Truly catastrophic, never allow
+# =============================================================================
+
+[deny.privilege_escalation]
+description = "Commands that escalate privileges"
+patterns = [
+    "^sudo ",
+    "^su ",
+    "^doas ",
+]
+
+[deny.catastrophic_deletion]
+description = "File deletion that could destroy system or all user data"
+patterns = [
+    "^rm -rf /$",
+    "^rm -rf /\\*",
+    "^rm -rf ~",
+    "^rm -rf \\.$",
+    "^rm -rf \\*$",
+    " rm -rf /$",
+    " rm -rf /\\*",
+]
+
+[deny.disk_destruction]
+description = "Direct disk/partition manipulation"
+patterns = [
+    "^dd if=.*/dev/",
+    "^dd of=/dev/",
+    "^mkfs\\.",
+    "^fdisk ",
+    "^parted ",
+]
+
+[deny.system_shutdown]
+description = "System shutdown/reboot commands"
+patterns = [
+    "^reboot",
+    "^shutdown",
+    "^poweroff",
+    "^halt$",
+    "^init 0",
+    "^init 6",
+]
+
+[deny.malicious_patterns]
+description = "Known malicious patterns"
+patterns = [
+    ":.*\\(\\).*\\{.*:\\|",    # Fork bombs
+    "^history -c",              # History destruction
+    "^history -w /dev/null",
+]
+
+# =============================================================================
+# ASK PATTERNS - Risky but useful, prompt for confirmation
+# =============================================================================
+
+[ask.git_destructive]
+description = "Git operations that rewrite history or are hard to undo"
+patterns = [
+    "^git push --force",
+    "^git push -f",
+    "^git reset --hard",
+    "^git clean -fd",
+    "^git rebase",
+    "^git merge",
+    "^git cherry-pick",
+    "^git revert",
+    "^git stash drop",
+    "^git stash clear",
+    "^git branch -[dD]",
+]
+
+[ask.git_main_branch]
+description = "Pushing directly to main/master branches"
+patterns = [
+    "^git push .* main$",
+    "^git push .* master$",
+    "^git push origin main",
+    "^git push origin master",
+]
+
+[ask.package_publishing]
+description = "Publishing packages to registries"
+patterns = [
+    "^npm publish",
+    "^yarn publish",
+    "^pnpm publish",
+    "^cargo publish",
+    "^poetry publish",
+    "^twine upload",
+    "^gh release create",
+]
+
+[ask.database_destructive]
+description = "Database operations that destroy data"
+patterns = [
+    "^psql .*DROP",
+    "^psql .*TRUNCATE",
+    "^mysql .*DROP",
+]
+
+[ask.github_mutations]
+description = "GitHub CLI operations that modify state"
+patterns = [
+    "^gh pr merge",
+    "^gh pr close",
+    "^gh pr ready",
+    "^gh repo delete",
+    "^gh repo archive",
+    "^gh issue close",
+    "^gh release delete",
+    "^gh run cancel",
+]
+
+[ask.file_permissions]
+description = "Broad file permission changes"
+patterns = [
+    "^chmod 777",
+    "^chmod -R 777",
+    "^chown ",
+    "^chgrp ",
+]
+
+[ask.docker_control]
+description = "Docker operations that stop/remove containers or clean up"
+patterns = [
+    "^docker system prune",
+    "^docker volume prune",
+    "^docker network prune",
+    "^docker image prune",
+    "^docker rmi",
+    "^docker rm ",
+    "^docker stop",
+    "^docker kill",
+    "^docker container rm",
+    "^docker container stop",
+]
+
+[ask.kubernetes_mutations]
+description = "Kubernetes operations that modify cluster state"
+patterns = [
+    "^kubectl apply",
+    "^kubectl create",
+    "^kubectl delete",
+    "^kubectl edit",
+    "^kubectl patch",
+    "^kubectl replace",
+    "^kubectl scale",
+    "^kubectl rollout restart",
+    "^kubectl rollout undo",
+    "^kubectl set ",
+    "^kubectl label",
+    "^kubectl annotate",
+    "^kubectl taint",
+    "^kubectl cordon",
+    "^kubectl uncordon",
+    "^kubectl drain",
+    "^kubectl exec",
+    "^k3s kubectl apply",
+    "^k3s kubectl create",
+    "^k3s kubectl delete",
+    "^k3s kubectl edit",
+    "^k3s kubectl patch",
+    "^k3s kubectl exec",
+]
+
+[ask.helm_mutations]
+description = "Helm operations that modify releases"
+patterns = [
+    "^helm install",
+    "^helm upgrade",
+    "^helm uninstall",
+    "^helm rollback",
+    "^helm repo add",
+    "^helm repo remove",
+    "^helm repo update",
+    "^helmfile apply",
+    "^helmfile sync",
+    "^helmfile destroy",
+]
+
+[ask.infrastructure_as_code]
+description = "IaC tools that modify infrastructure"
+patterns = [
+    "^terraform apply",
+    "^terraform destroy",
+    "^terraform import",
+    "^terraform taint",
+    "^terraform untaint",
+    "^pulumi up",
+    "^pulumi destroy",
+    "^pulumi refresh",
+    "^ansible-playbook",
+]
+
+[ask.cloud_mutations]
+description = "Cloud CLI operations that create/modify/delete resources"
+patterns = [
+    "aws .* delete(\\s|$)",
+    "aws .* remove(\\s|$)",
+    "aws .* terminate(\\s|$)",
+    "aws .* create(\\s|$)",
+    "aws .* put(\\s|$)",
+    "aws .* update(\\s|$)",
+    "gcloud .* delete(\\s|$)",
+    "gcloud .* create(\\s|$)",
+    "az .* delete(\\s|$)",
+    "az .* create(\\s|$)",
+]
+
+[ask.process_control]
+description = "Killing or stopping processes"
+patterns = [
+    "^kill ",
+    "^killall",
+    "^pkill",
+]
+
+[ask.service_management]
+description = "Starting/stopping system services"
+patterns = [
+    "^systemctl start",
+    "^systemctl stop",
+    "^systemctl restart",
+    "^systemctl enable",
+    "^systemctl disable",
+    "^systemctl mask",
+    "^service .* start",
+    "^service .* stop",
+    "^service .* restart",
+]
+
+[ask.firewall]
+description = "Firewall configuration"
+patterns = [
+    "^iptables",
+    "^ip6tables",
+    "^ufw ",
+    "^firewall-cmd",
+    "^nft ",
+]
+
+[ask.user_management]
+description = "User, group, and cron management"
+patterns = [
+    "^crontab",
+    "^visudo",
+    "^passwd",
+    "^useradd",
+    "^userdel",
+    "^usermod",
+    "^groupadd",
+    "^groupdel",
+]
+
+[ask.secrets_encryption]
+description = "Encrypting secrets (decryption is allowed)"
+patterns = [
+    "^sops -e",
+    "^sops --encrypt",
+]
+
+[ask.remote_access]
+description = "Remote access and file transfer"
+patterns = [
+    "^ssh ",
+    "^scp ",
+    "^rsync ",
+    "^sftp ",
+    "^ftp ",
+    "^telnet ",
+    "^nc -l",
+]
+
+[ask.file_deletion]
+description = "Potentially destructive file removal"
+patterns = [
+    "^rm -r",
+    "^rm -f",
+]
+
+[ask.dangerous_pipelines]
+description = "Dangerous command combinations"
+patterns = [
+    "xargs.*rm",
+    "xargs.*mv ",
+    "xargs.*chmod",
+    "xargs.*chown",
+    "find.*-exec.*rm",
+    "find.*-exec.*chmod",
+    "find.*-delete",
+]
+
+[ask.code_execution]
+description = "Arbitrary code execution patterns"
+patterns = [
+    "\\| *sh$",
+    "\\| *bash$",
+    "\\| *zsh$",
+    "^eval ",
+    "source /tmp/",
+    "source /var/tmp/",
+    "\\. /tmp/",
+    "\\. /var/tmp/",
+]
+
+# =============================================================================
+# ALLOW PATTERNS - Safe operations, auto-approve
+# =============================================================================
+
+[allow.shell_constructs]
+description = "Shell builtins and constructs"
+patterns = [
+    "^\\(",
+    "^\\{",
+    "^:$",
+    "^true$",
+    "^false$",
+    "^sleep ",
+    "^read ",
+    "^wait",
+    "^set ",
+    "^return",
+    "^exit",
+    "^local ",
+    "^test$",
+    "^\\[$",
+]
+
+[allow.path_utilities]
+description = "Path manipulation utilities"
+patterns = [
+    "^basename",
+    "^dirname",
+    "^realpath",
+    "^readlink",
+    "^mktemp",
+    "^seq ",
+    "^rev",
+    "^yes ",
+]
+
+[allow.shell_navigation]
+description = "Shell navigation and history"
+patterns = [
+    "^cd ",
+    "^pushd",
+    "^popd",
+    "^dirs",
+    "^history",
+    "^jobs",
+    "^fg",
+    "^bg",
+    "^source ",
+    "^\\. ",
+    "^export ",
+    "^alias",
+    "^declare",
+]
+
+[allow.help_and_info]
+description = "Help and version information"
+patterns = [
+    "^less",
+    "^bat",
+    "^watch ",
+    "^man ",
+    "--version$",
+    "--help$",
+]
+
+[allow.c_cpp_toolchain]
+description = "C/C++ compilation and linking"
+patterns = [
+    "^gcc",
+    "^g\\+\\+",
+    "^clang",
+    "^cc ",
+    "^c\\+\\+ ",
+    "^ld ",
+    "^ar ",
+    "^nm ",
+    "^objdump",
+    "^ldd ",
+    "^pkg-config",
+    "^strip",
+]
+
+[allow.haskell]
+description = "Haskell toolchain"
+patterns = [
+    "^ghc",
+    "^ghci",
+    "^stack ",
+    "^cabal ",
+    "^hlint",
+]
+
+[allow.clojure]
+description = "Clojure toolchain"
+patterns = [
+    "^clj ",
+    "^clojure",
+    "^lein",
+]
+
+[allow.dart_flutter]
+description = "Dart and Flutter"
+patterns = [
+    "^dart ",
+    "^flutter",
+    "^pub ",
+]
+
+[allow.r_lang]
+description = "R language"
+patterns = [
+    "^R ",
+    "^Rscript",
+]
+
+[allow.julia]
+description = "Julia language"
+patterns = [
+    "^julia",
+]
+
+[allow.web3]
+description = "Solidity and Web3 tools"
+patterns = [
+    "^solc",
+    "^hardhat",
+    "^forge ",
+    "^cast ",
+    "^anvil",
+]
+
+[allow.protobuf]
+description = "Protocol Buffers and gRPC"
+patterns = [
+    "^protoc",
+    "^grpcurl",
+    "^buf ",
+]
+
+[allow.local_kubernetes]
+description = "Local Kubernetes tools"
+patterns = [
+    "^kind ",
+    "^minikube",
+    "^k3d",
+]
+
+[allow.kubernetes_utilities]
+description = "Kubernetes helper utilities"
+patterns = [
+    "^kubectx",
+    "^kubens",
+    "^stern ",
+    "^krew",
+]
+
+[allow.ci_cd]
+description = "CI/CD local runners"
+patterns = [
+    "^act",
+]
+
+[allow.cloud_platforms]
+description = "Cloud platform CLIs (read operations)"
+patterns = [
+    "^vercel",
+    "^netlify",
+    "^flyctl",
+    "^railway",
+    "^heroku",
+    "^cloudflared",
+    "^ngrok",
+    "^wrangler",
+    "^doctl",
+    "^eksctl",
+    "^sam ",
+]
+
+[allow.database_tools]
+description = "Database CLI tools"
+patterns = [
+    "^pgcli",
+    "^mycli",
+    "^litecli",
+    "^usql",
+    "^pg_dump",
+    "^pg_restore",
+    "^mysqldump",
+    "^mongodump",
+]
+
+[allow.observability]
+description = "Observability tools"
+patterns = [
+    "^promtool",
+    "^logcli",
+]
+
+[allow.text_processing]
+description = "Text processing utilities"
+patterns = [
+    "^column",
+    "^fold",
+    "^nl ",
+    "^paste",
+    "^shuf",
+    "^tac",
+    "^iconv",
+    "^dos2unix",
+    "^unix2dos",
+    "^strings",
+    "^bc ",
+    "^expr",
+]
+
+[allow.compression]
+description = "Compression and archiving"
+patterns = [
+    "^bzip2",
+    "^bunzip2",
+    "^bzcat",
+    "^xz ",
+    "^unxz",
+    "^xzcat",
+    "^zstd",
+    "^unzstd",
+    "^zstdcat",
+    "^lz4",
+    "^7z ",
+    "^rar ",
+    "^unrar",
+]
+
+[allow.system_inspection]
+description = "System information commands"
+patterns = [
+    "^lscpu",
+    "^lsmem",
+    "^lsblk",
+    "^lspci",
+    "^lsusb",
+    "^nproc",
+    "^sensors",
+    "^inxi",
+    "^neofetch",
+    "^strace",
+    "^ltrace",
+    "^perf ",
+    "^valgrind",
+]
+
+[allow.command_wrappers]
+description = "Command execution wrappers"
+patterns = [
+    "^unbuffer",
+    "^stdbuf",
+    "^setsid",
+    "^parallel",
+    "^chronic",
+    "^sponge",
+]
+
+[allow.javascript]
+description = "JavaScript/Node.js ecosystem"
+patterns = [
+    "^npm ",
+    "^npx ",
+    "^node ",
+    "^yarn ",
+    "^pnpm ",
+    "^bun ",
+    "^deno ",
+]
+
+[allow.git]
+description = "Git and GitHub CLI"
+patterns = [
+    "^git ",
+    "^gh ",
+]
+
+[allow.python]
+description = "Python ecosystem"
+patterns = [
+    "^python",
+    "^pytest",
+    "^poetry ",
+    "^pip",
+    "^pipx ",
+    "^uv ",
+    "^pdm ",
+    "^hatch ",
+]
+
+[allow.go]
+description = "Go toolchain"
+patterns = [
+    "^go ",
+    "^gofmt",
+    "^goimports",
+    "^golangci-lint",
+]
+
+[allow.rust]
+description = "Rust toolchain"
+patterns = [
+    "^cargo ",
+    "^rustc",
+    "^rustfmt",
+    "^clippy",
+]
+
+[allow.java]
+description = "Java/JVM ecosystem"
+patterns = [
+    "^java ",
+    "^javac",
+    "^mvn ",
+    "^gradle",
+    "^\\./gradlew",
+    "^scala",
+    "^sbt ",
+    "^kotlin",
+]
+
+[allow.ruby]
+description = "Ruby ecosystem"
+patterns = [
+    "^ruby ",
+    "^gem ",
+    "^bundle",
+    "^rake ",
+    "^rails ",
+    "^rspec",
+    "^rubocop",
+]
+
+[allow.php]
+description = "PHP ecosystem"
+patterns = [
+    "^php ",
+    "^composer",
+    "^phpunit",
+    "^phpstan",
+]
+
+[allow.other_languages]
+description = "Other language runtimes"
+patterns = [
+    "^dotnet",
+    "^elixir",
+    "^mix ",
+    "^iex",
+    "^swift",
+    "^zig ",
+    "^lua ",
+    "^luarocks",
+    "^perl ",
+]
+
+[allow.build_tools]
+description = "Build systems"
+patterns = [
+    "^make",
+    "^cmake",
+    "^ninja",
+    "^meson",
+    "^bazel",
+]
+
+[allow.linters]
+description = "Linters and formatters"
+patterns = [
+    "^ruff ",
+    "^mypy",
+    "^black ",
+    "^isort",
+    "^flake8",
+    "^pylint",
+    "^bandit",
+    "^yamllint",
+    "^shellcheck",
+    "^actionlint",
+    "^prettier",
+    "^eslint",
+    "^biome",
+    "^tsc",
+]
+
+[allow.testing]
+description = "Testing frameworks"
+patterns = [
+    "^jest",
+    "^vitest",
+    "^mocha",
+    "^playwright",
+    "^cypress",
+]
+
+[allow.databases]
+description = "Database clients"
+patterns = [
+    "^psql",
+    "^mysql",
+    "^sqlite3",
+    "^mongosh",
+    "^redis-cli",
+]
+
+[allow.cloud_cli]
+description = "Cloud CLIs (mutations blocked by ask patterns)"
+patterns = [
+    "^aws ",
+    "^gcloud ",
+    "^az ",
+    "^terraform ",
+    "^pulumi ",
+    "^ansible ",
+    "^vagrant",
+    "^packer",
+]
+
+[allow.file_operations]
+description = "Common file operations"
+patterns = [
+    "^ls",
+    "^cat ",
+    "^head ",
+    "^tail ",
+    "^wc ",
+    "^grep",
+    "^rg ",
+    "^ag ",
+    "^fd ",
+    "^fzf",
+    "^find ",
+    "^pwd$",
+    "^env$",
+    "^printenv",
+    "^which ",
+    "^whereis",
+    "^type ",
+    "^file ",
+    "^stat ",
+    "^tree",
+    "^cloc",
+    "^tokei",
+    "^mkdir",
+    "^rmdir",
+    "^cp ",
+    "^mv ",
+    "^ln ",
+    "^chmod ",
+    "^touch ",
+    "^echo ",
+    "^printf",
+    "^sort",
+    "^uniq",
+    "^cut ",
+    "^tr ",
+    "^xargs",
+    "^tar ",
+    "^zip",
+    "^unzip",
+    "^gzip",
+    "^gunzip",
+    "^zcat",
+    "^du ",
+    "^df",
+    "^free",
+    "^test ",
+    "^\\[ ",
+    "^tee ",
+    "^awk",
+    "^sed ",
+    "^jq",
+    "^yq",
+    "^curl",
+    "^wget",
+    "^http ",
+    "^httpie",
+]
+
+[allow.process_inspection]
+description = "Process inspection (not control)"
+patterns = [
+    "^lsof",
+    "^pgrep",
+    "^ps ",
+    "^top",
+    "^htop",
+    "^timeout ",
+    "^time ",
+    "^date",
+    "^cal",
+    "^uptime",
+    "^uname",
+    "^hostname",
+    "^whoami",
+    "^id",
+    "^groups",
+]
+
+[allow.diff_patch]
+description = "Diff and patch tools"
+patterns = [
+    "^diff",
+    "^colordiff",
+    "^delta",
+    "^patch",
+]
+
+[allow.checksums]
+description = "Checksums and encoding"
+patterns = [
+    "^md5sum",
+    "^sha256sum",
+    "^sha1sum",
+    "^base64",
+    "^xxd",
+    "^hexdump",
+    "^openssl",
+    "^ssh-keygen",
+]
+
+[allow.network_diagnostics]
+description = "Network diagnostic tools"
+patterns = [
+    "^dig ",
+    "^nslookup",
+    "^host ",
+    "^ping",
+    "^traceroute",
+    "^mtr",
+    "^ss ",
+    "^netstat",
+    "^ip ",
+    "^ifconfig",
+    "^nc ",
+]
+
+[allow.docker]
+description = "Docker (mutations blocked by ask patterns)"
+patterns = [
+    "^docker ",
+    "^docker-compose",
+    "^podman",
+]
+
+[allow.kubernetes]
+description = "Kubernetes (mutations blocked by ask patterns)"
+patterns = [
+    "^kubectl ",
+    "^k3s kubectl",
+    "^k9s",
+    "^helm ",
+    "^helmfile ",
+    "^kustomize",
+    "^skaffold",
+    "^istioctl",
+    "^argocd",
+    "^flux",
+]
+
+[allow.secrets]
+description = "Secrets decryption"
+patterns = [
+    "^sops -d",
+    "^sops --decrypt",
+    "^age ",
+]
+
+[allow.version_managers]
+description = "Language version managers"
+patterns = [
+    "^nvm ",
+    "^pyenv",
+    "^rbenv",
+    "^asdf",
+    "^volta",
+    "^fnm",
+    "^direnv",
+]
+
+[allow.venv]
+description = "Virtual environment binaries"
+patterns = [
+    "^\\.venv/bin/",
+    "^venv/bin/",
+]
+
+[allow.system_readonly]
+description = "Read-only system inspection"
+patterns = [
+    "^tailscale",
+    "^mount$",
+    "^dmesg",
+    "^journalctl",
+    "^systemctl status",
+    "^systemctl show",
+    "^systemctl list",
+    "^systemctl is-",
+    "^service .* status",
+]
+
+[allow.command_utilities]
+description = "Command execution utilities"
+patterns = [
+    "^command -v",
+    "^env ",
+    "^exec ",
+    "^nohup ",
+    "^nice ",
+    "^ionice ",
+]
