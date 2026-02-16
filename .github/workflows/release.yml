@@ -1,8 +1,9 @@
 name: Release with SLSA Provenance
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -93,6 +94,22 @@ jobs:
         with:
           name: ${{ needs.provenance.outputs.provenance-name }}
 
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Check if release exists; if not, create a draft
+          if ! gh release view ${{ github.ref_name }} &>/dev/null; then
+            echo "Creating draft release for ${{ github.ref_name }}"
+            gh release create ${{ github.ref_name }} \
+              --draft \
+              --generate-notes \
+              --title "${{ github.ref_name }}"
+          else
+            echo "Release ${{ github.ref_name }} already exists"
+          fi
+
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -112,11 +129,19 @@ jobs:
           gh release upload ${{ github.ref_name }} \
             checksums.txt \
             --clobber
-          
+
           # Upload SLSA provenance attestation
           gh release upload ${{ github.ref_name }} \
             *.intoto.jsonl \
             --clobber
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Publish the release (makes it non-draft)
+          gh release edit ${{ github.ref_name }} --draft=false
 
       - name: Verify release assets
         env:
@@ -140,7 +165,8 @@ jobs:
     name: Publish to GitHub Packages
     needs: [build-artifacts, provenance]
     runs-on: ubuntu-latest
-    if: ${{ !github.event.release.prerelease }}
+    # Only publish stable releases (skip pre-releases like v1.2.3-rc.1)
+    if: ${{ !contains(github.ref_name, '-') }}
     permissions:
       contents: read
       packages: write
