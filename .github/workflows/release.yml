@@ -1,8 +1,9 @@
 name: Release with SLSA Provenance
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -70,11 +71,10 @@ jobs:
       actions: read
       id-token: write
       contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@5a775b367a56d5bd118a224a811bba288150a563 # v2.0.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
     with:
       base64-subjects: "${{ needs.build-artifacts.outputs.hashes }}"
-      upload-assets: true
-      upload-tag-name: ${{ github.ref_name }}
+      upload-assets: false
 
   upload-assets:
     name: Upload Release Assets
@@ -87,6 +87,27 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-artifacts
+
+      - name: Download provenance
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.provenance.outputs.provenance-name }}
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Check if release exists; if not, create a draft
+          if ! gh release view ${{ github.ref_name }} &>/dev/null; then
+            echo "Creating draft release for ${{ github.ref_name }}"
+            gh release create ${{ github.ref_name }} \
+              --draft \
+              --generate-notes \
+              --title "${{ github.ref_name }}"
+          else
+            echo "Release ${{ github.ref_name }} already exists"
+          fi
 
       - name: Upload release assets
         env:
@@ -107,6 +128,19 @@ jobs:
           gh release upload ${{ github.ref_name }} \
             checksums.txt \
             --clobber
+
+          # Upload SLSA provenance attestation
+          gh release upload ${{ github.ref_name }} \
+            *.intoto.jsonl \
+            --clobber
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Publish the release (makes it non-draft)
+          gh release edit ${{ github.ref_name }} --draft=false
 
       - name: Verify release assets
         env:
@@ -130,7 +164,8 @@ jobs:
     name: Publish to GitHub Packages
     needs: [build-artifacts, provenance]
     runs-on: ubuntu-latest
-    if: ${{ !github.event.release.prerelease }}
+    # Only publish stable releases (skip pre-releases like v1.2.3-rc.1)
+    if: ${{ !contains(github.ref_name, '-') }}
     permissions:
       contents: read
       packages: write
