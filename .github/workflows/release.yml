@@ -80,6 +80,9 @@ jobs:
     name: Upload Release Assets
     needs: [build-artifacts, provenance]
     runs-on: ubuntu-latest
+    # Only create releases for semver-like tags (must contain '.'), skip floating tags like 'v2'
+    # This prevents locking floating tags which need to be updated on each release
+    if: ${{ contains(github.ref_name, '.') }}
     permissions:
       contents: write # Required to upload release assets
     steps:
@@ -164,8 +167,8 @@ jobs:
     name: Publish to GitHub Packages
     needs: [build-artifacts, provenance]
     runs-on: ubuntu-latest
-    # Only publish stable releases (skip pre-releases like v1.2.3-rc.1)
-    if: ${{ !contains(github.ref_name, '-') }}
+    # Only publish releases with semver-like tags (contain '.'), skip floating tags (v1) and prereleases (v1.2.3-rc.1)
+    if: ${{ contains(github.ref_name, '.') && !contains(github.ref_name, '-') }}
     permissions:
       contents: read
       packages: write
