@@ -30,25 +30,30 @@ git checkout main && git pull origin main
 # Verify CI is green
 gh run list --branch main --limit 3
 
-# Create and push version tag
+# Create and push version tag (this triggers the release workflow)
 git tag v${NEW_VERSION}
 git push origin v${NEW_VERSION}
 
-# Create GitHub release with auto-generated notes
-gh release create v${NEW_VERSION} --generate-notes --title "v${NEW_VERSION}"
+# The workflow automatically:
+# 1. Creates a draft release
+# 2. Builds and uploads artifacts with SLSA provenance
+# 3. Publishes the release
 
-# Verify
+# Monitor the workflow
+gh run list --limit 1
+
+# Verify once complete
 gh release view v${NEW_VERSION}
 ```
 
 ## What Happens Automatically
 
-When you create a release, the **release workflow** runs 5 parallel jobs:
+When you push a version tag, the **release workflow** automatically:
 
 1. **build-artifacts** - Compiles and packages the action
 2. **provenance** - Generates SLSA Level 3 attestation
-3. **upload-assets** - Attaches signed artifacts to release
-4. **publish-package** - Publishes to GitHub Packages (npm)
+3. **upload-assets** - Creates a draft release, uploads artifacts, then publishes
+4. **publish-package** - Publishes to GitHub Packages (npm, stable releases only)
 5. **update-major-tag** - Updates floating tag (e.g., `v2` → `v2.2.3`)
 
 **Generated Artifacts:**
@@ -94,7 +99,7 @@ gh pr list --state merged --base main --limit 10
 - `packages: write` - Publish to GitHub Packages
 
 **Workflow Structure:**
-All jobs run in parallel except `upload-assets` and `publish-package` which wait for artifact generation. The workflow is consolidated into `.github/workflows/release.yml` for easier maintenance.
+The workflow triggers on tag push (`v*`). Jobs run in parallel where possible, with `upload-assets` and `publish-package` waiting for artifact generation and provenance. The `upload-assets` job creates a draft release, uploads all assets including SLSA provenance, then publishes the release. This pattern avoids "immutable release" errors that occur when trying to upload to already-published releases.
 
 **GitHub Packages Publishing:**
 The `publish-package` job modifies `package.json` at publish-time to configure the scoped package name and registry. This is intentional to keep the source `package.json` clean and avoid registry-specific configuration in the repository. The published package metadata will differ from the source repository.
