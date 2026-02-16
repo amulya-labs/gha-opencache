@@ -164,8 +164,8 @@ jobs:
     name: Publish to GitHub Packages
     needs: [build-artifacts, provenance]
     runs-on: ubuntu-latest
-    # Only publish stable releases (skip pre-releases like v1.2.3-rc.1)
-    if: ${{ !contains(github.ref_name, '-') }}
+    # Only publish stable semver releases (v1.2.3), skip floating tags (v1) and prereleases (v1.2.3-rc.1)
+    if: ${{ contains(github.ref_name, '.') && !contains(github.ref_name, '-') }}
     permissions:
       contents: read
       packages: write
