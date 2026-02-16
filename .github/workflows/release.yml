@@ -155,7 +155,10 @@ jobs:
 
       - name: Publish release
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Use PAT instead of GITHUB_TOKEN to ensure release:published event
+          # triggers the publish.yml workflow. GITHUB_TOKEN suppresses events
+          # to prevent recursive workflow runs.
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_WRITE_PAT }}
           GH_REPO: ${{ github.repository }}
         run: |
           # Publish the release (makes it non-draft)
