@@ -42,7 +42,7 @@
 ## Quick Start
 
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -55,7 +55,7 @@
 **S3-compatible** (MinIO, R2, AWS S3, etc.):
 
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -71,7 +71,7 @@
 **Google Cloud Storage**:
 
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     path: node_modules
     key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -321,7 +321,7 @@ jobs:
       volumes:
         - /srv/gha-cache:/cache
     steps:
-      - uses: amulya-labs/gha-opencache@v2
+      - uses: amulya-labs/gha-opencache@v3
         with:
           cache-path: /cache
 ```

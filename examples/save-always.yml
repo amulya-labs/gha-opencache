@@ -40,7 +40,7 @@ jobs:
 
       # === INCREMENTAL COMPILATION CACHE ===
       - name: Cache Rust build artifacts (save always)
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -76,7 +76,7 @@ jobs:
 
       # === TEST COVERAGE CACHE ===
       - name: Cache test coverage (save always)
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: coverage/
           key: coverage-${{ runner.os }}-${{ github.sha }}

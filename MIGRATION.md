@@ -4,7 +4,7 @@ Migration from `actions/cache` and storage backend setup.
 
 ## From actions/cache
 
-**Two steps:** (1) Change `uses: actions/cache@v4` → `amulya-labs/gha-opencache@v2` | (2) Choose storage (see below)
+**Two steps:** (1) Change `uses: actions/cache@v4` → `amulya-labs/gha-opencache@v3` | (2) Choose storage (see below)
 
 All inputs, outputs, and behavior are identical.
 
@@ -62,7 +62,7 @@ find ~/.cache/gha-opencache -type f -mtime +7 -delete
 
 **Common workflow config:**
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     storage-provider: s3
     s3-bucket: my-cache-bucket
@@ -165,7 +165,7 @@ gcloud iam service-accounts keys create gha-cache-key.json \
     echo '${{ secrets.GCP_SA_KEY }}' > ${{ runner.temp }}/gcp-key.json
     echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/gcp-key.json" >> $GITHUB_ENV
 
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     storage-provider: gcs
     gcs-bucket: my-gha-cache-bucket
@@ -212,7 +212,7 @@ jobs:
         with:
           workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           service_account: github-actions-cache@my-project.iam.gserviceaccount.com
-      - uses: amulya-labs/gha-opencache@v2
+      - uses: amulya-labs/gha-opencache@v3
         with:
           storage-provider: gcs
           gcs-bucket: my-gha-cache-bucket

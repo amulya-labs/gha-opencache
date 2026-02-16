@@ -37,7 +37,7 @@ jobs:
           python-version: '3.11'
 
       - name: Cache pip packages
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: ~/.cache/pip
           # Primary key: exact match on requirements.txt

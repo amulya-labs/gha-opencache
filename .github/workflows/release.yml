@@ -1,5 +1,19 @@
 name: Release with SLSA Provenance
 
+# =============================================================================
+# FLOATING TAG PROTECTION
+# =============================================================================
+# This workflow triggers on ALL v* tags, including floating major tags (v3).
+# When update-major-tag pushes v3, it triggers a new workflow run.
+#
+# CRITICAL: Jobs that create GitHub Releases or publish packages MUST have:
+#   if: ${{ contains(github.ref_name, '.') }}
+# This ensures they only run for semver tags (v3.0.0) not floating tags (v3).
+#
+# GitHub Releases lock their associated tags (immutable: true), which would
+# permanently corrupt floating tags. See docs/RELEASING.md for details.
+# =============================================================================
+
 on:
   push:
     tags:
@@ -14,6 +28,8 @@ jobs:
   build-artifacts:
     name: Build Release Artifacts
     runs-on: ubuntu-latest
+    # Only build for semver tags (v3.0.0), skip floating tags (v3) to save CI minutes
+    if: ${{ contains(github.ref_name, '.') }}
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
     steps:

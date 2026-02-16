@@ -37,7 +37,7 @@ jobs:
           go-version: '1.21'
 
       - name: Cache Go modules
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: ~/go/pkg/mod
           # Primary key: exact match on go.sum
@@ -49,7 +49,7 @@ jobs:
             go-mod-${{ runner.os }}-
 
       - name: Cache Go build artifacts
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: ~/.cache/go-build
           # Primary key: exact match on all Go source files

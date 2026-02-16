@@ -16,7 +16,7 @@ jobs:
         - /srv/gha-cache:/srv/gha-cache  # Mount a volume
 
     steps:
-      - uses: amulya-labs/gha-opencache@v2
+      - uses: amulya-labs/gha-opencache@v3
         with:
           path: .venv
           key: deps-${{ hashFiles('**/requirements.txt') }}
@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Cache node_modules
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: node_modules
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -97,21 +97,21 @@ jobs:
 
       # All caches use the same cache-path
       - name: Cache Python dependencies
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: .venv
           key: poetry-${{ hashFiles('poetry.lock') }}
           cache-path: /srv/gha-cache
 
       - name: Cache Ruff
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: .ruff_cache
           key: ruff-${{ hashFiles('src/**/*.py') }}
           cache-path: /srv/gha-cache
 
       - name: Cache pytest
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: .pytest_cache
           key: pytest-${{ hashFiles('tests/**/*.py') }}
@@ -135,7 +135,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cache Gradle
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: ~/.gradle/caches
           key: gradle-${{ hashFiles('**/*.gradle*') }}
@@ -159,7 +159,7 @@ If you're upgrading from `gha-opencache@v1` and use containers, you **must** add
 ### After (v2 - requires explicit cache-path)
 
 ```yaml
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     path: .venv
     key: deps-${{ hashFiles('poetry.lock') }}
@@ -191,7 +191,7 @@ the container and will not persist between jobs.
 
 To fix, add an explicit cache-path with a mounted volume:
 
-  - uses: amulya-labs/gha-opencache@v2
+  - uses: amulya-labs/gha-opencache@v3
     with:
       cache-path: /srv/gha-cache
 
@@ -239,14 +239,14 @@ Otherwise, verify:
 
 ```yaml
 # Before (broken)
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     path: .venv
     key: deps-${{ hashFiles('poetry.lock') }}
     # Missing cache-path!
 
 # After (fixed)
-- uses: amulya-labs/gha-opencache@v2
+- uses: amulya-labs/gha-opencache@v3
   with:
     path: .venv
     key: deps-${{ hashFiles('poetry.lock') }}
@@ -284,7 +284,7 @@ container:
     #   Host path      Container path
     
 steps:
-  - uses: amulya-labs/gha-opencache@v2
+  - uses: amulya-labs/gha-opencache@v3
     with:
       cache-path: /srv/gha-cache  # ← Must match container path
 ```
@@ -322,7 +322,7 @@ jobs:
       volumes:
         - /srv/gha-cache:/srv/gha-cache
     steps:
-      - uses: amulya-labs/gha-opencache@v2
+      - uses: amulya-labs/gha-opencache@v3
         with:
           cache-path: /srv/gha-cache
 
@@ -331,7 +331,7 @@ jobs:
       volumes:
         - /srv/gha-cache:/srv/gha-cache
     steps:
-      - uses: amulya-labs/gha-opencache@v2
+      - uses: amulya-labs/gha-opencache@v3
         with:
           cache-path: /srv/gha-cache
 ```
@@ -344,7 +344,7 @@ Add comments explaining the container requirement:
 - name: Cache dependencies
   # NOTE: cache-path required for container-based jobs
   # Without it, v2 uses $HOME/.cache/gha-opencache (ephemeral)
-  uses: amulya-labs/gha-opencache@v2
+  uses: amulya-labs/gha-opencache@v3
   with:
     path: node_modules
     cache-path: /srv/gha-cache  # Use mounted volume (persists across runs)
@@ -372,7 +372,7 @@ jobs:
       volumes:
         - ${{ env.CACHE_PATH }}:${{ env.CACHE_PATH }}
     steps:
-      - uses: amulya-labs/gha-opencache@v2
+      - uses: amulya-labs/gha-opencache@v3
         with:
           cache-path: ${{ env.CACHE_PATH }}
 ```
@@ -386,7 +386,7 @@ jobs:
   test:
     runs-on: ubuntu-latest  # No container
     steps:
-      - uses: amulya-labs/gha-opencache@v2
+      - uses: amulya-labs/gha-opencache@v3
         with:
           path: .venv
           key: deps-${{ hashFiles('poetry.lock') }}

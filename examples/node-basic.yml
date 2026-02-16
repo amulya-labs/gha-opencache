@@ -32,7 +32,7 @@ jobs:
           node-version: '20'
 
       - name: Cache npm dependencies
-        uses: amulya-labs/gha-opencache@v2
+        uses: amulya-labs/gha-opencache@v3
         with:
           path: node_modules
           # Primary key: exact match on package-lock.json
