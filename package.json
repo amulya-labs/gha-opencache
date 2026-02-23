@@ -36,12 +36,12 @@
   },
   "homepage": "https://github.com/amulya-labs/gha-opencache#readme",
   "dependencies": {
-    "@actions/core": "^2.0.3",
-    "@actions/exec": "^2.0.0",
-    "@actions/glob": "^0.5.1",
-    "@actions/io": "^2.0.0",
-    "@aws-sdk/client-s3": "^3.990.0",
-    "@aws-sdk/lib-storage": "^3.990.0",
+    "@actions/core": "^3.0.0",
+    "@actions/exec": "^3.0.0",
+    "@actions/glob": "^0.6.1",
+    "@actions/io": "^3.0.2",
+    "@aws-sdk/client-s3": "^3.996.0",
+    "@aws-sdk/lib-storage": "^3.996.0",
     "@google-cloud/storage": "^7.19.0",
     "proper-lockfile": "^4.1.2"
   },
