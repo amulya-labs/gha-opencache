@@ -23,8 +23,7 @@ function checkBaseDirWritable(basePath: string): void {
         `This usually means a container job (running as root) previously created\n` +
         `this directory, and a non-container job is now trying to use it.\n\n` +
         `Fix — run once on your runner host:\n` +
-        `  sudo chmod g+w ${basePath}\n` +
-        `  sudo chgrp $(id -gn) ${basePath}\n\n` +
+        `  sudo chown -R $(whoami) ${basePath}\n\n` +
         `Or point to a directory the runner user already owns:\n` +
         `  export OPENCACHE_PATH=/home/runner/.cache/gha-opencache`
       );
