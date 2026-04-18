@@ -305,7 +305,8 @@ describe('LocalStorageProvider integration', () => {
 
   describe('index migration', () => {
     it('migrates v1 index to v2 on load', async () => {
-      const repoDir = path.join(cacheDir, 'test-owner', 'migrate-repo');
+      const uid = process.getuid?.() ?? 0;
+      const repoDir = path.join(cacheDir, `uid-${uid}`, 'test-owner', 'migrate-repo');
       fs.mkdirSync(path.join(repoDir, 'archives'), { recursive: true });
       fs.writeFileSync(path.join(repoDir, 'archives', 'test.tar.gz'), 'dummy');
 

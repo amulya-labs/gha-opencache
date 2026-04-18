@@ -102,6 +102,24 @@ describe('LocalStorageProvider', () => {
 
       expect(provider).toBeInstanceOf(LocalStorageProvider);
     });
+
+    it('includes uid segment in cacheDir path', () => {
+      const uid = process.getuid?.() ?? 0;
+      createLocalStorageProvider('/cache', 'owner', 'repo');
+      expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith(
+        `/cache/uid-${uid}/owner/repo`
+      );
+    });
+
+    it('uses uid-0 on platforms without process.getuid', () => {
+      const originalGetuid = process.getuid;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore simulating Windows where getuid is undefined
+      process.getuid = undefined;
+      createLocalStorageProvider('/cache', 'owner', 'repo');
+      expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith('/cache/uid-0/owner/repo');
+      process.getuid = originalGetuid;
+    });
   });
 
   describe('restore', () => {

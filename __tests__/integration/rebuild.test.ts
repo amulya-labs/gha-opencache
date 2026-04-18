@@ -23,7 +23,8 @@ describe('Index Rebuild Integration', () => {
   beforeEach(async () => {
     // Create unique test directory
     testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencache-rebuild-test-'));
-    cacheDir = path.join(testDir, 'owner', 'repo');
+    const uid = process.getuid?.() ?? 0;
+    cacheDir = path.join(testDir, `uid-${uid}`, 'owner', 'repo');
     archivesDir = path.join(cacheDir, ARCHIVES_DIR);
 
     // Ensure directories exist

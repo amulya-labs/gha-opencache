@@ -27,7 +27,8 @@ export class LocalStorageProvider extends BaseStorageProvider implements Storage
   private readonly localBackend: LocalStorageBackend;
 
   constructor(basePath: string, owner: string, repo: string, options: LocalStorageOptions = {}) {
-    const cacheDir = path.join(basePath, owner, repo);
+    const uid = process.getuid?.() ?? 0;
+    const cacheDir = path.join(basePath, `uid-${uid}`, owner, repo);
     const localBackend = createLocalStorageBackend(cacheDir);
     const indexStore = createFileIndexStore(cacheDir);
     const lockManager = createFileLockManager(cacheDir);
