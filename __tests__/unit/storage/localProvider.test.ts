@@ -87,6 +87,57 @@ describe('LocalStorageProvider', () => {
     jest.clearAllMocks();
   });
 
+  describe('startup write-access check', () => {
+    beforeEach(() => {
+      mockFs.existsSync.mockReturnValue(false);
+      mockFs.accessSync.mockReturnValue(undefined);
+    });
+
+    it('throws clear error with path when basePath exists but is not writable', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const eaccesError = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      mockFs.accessSync.mockImplementation(() => { throw eaccesError; });
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        /Cannot write to cache base directory: \/srv\/gha-cache/
+      );
+    });
+
+    it('error includes chmod and chgrp fix commands', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const eaccesError = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      mockFs.accessSync.mockImplementation(() => { throw eaccesError; });
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        /chmod g\+w/
+      );
+    });
+
+    it('error includes OPENCACHE_PATH alternative', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const eaccesError = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      mockFs.accessSync.mockImplementation(() => { throw eaccesError; });
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        /OPENCACHE_PATH/
+      );
+    });
+
+    it('does not throw when basePath exists and is writable', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.accessSync.mockReturnValue(undefined);
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).not.toThrow();
+    });
+
+    it('does not check access when basePath does not exist', () => {
+      mockFs.existsSync.mockReturnValue(false);
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).not.toThrow();
+      expect(mockFs.accessSync).not.toHaveBeenCalled();
+    });
+  });
+
   describe('createLocalStorageProvider', () => {
     it('creates provider', () => {
       const provider = createLocalStorageProvider('/cache', 'owner', 'repo');
