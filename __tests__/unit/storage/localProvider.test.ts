@@ -113,12 +113,15 @@ describe('LocalStorageProvider', () => {
 
     it('uses uid-0 on platforms without process.getuid', () => {
       const originalGetuid = process.getuid;
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore simulating Windows where getuid is undefined
-      process.getuid = undefined;
-      createLocalStorageProvider('/cache', 'owner', 'repo');
-      expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith('/cache/uid-0/owner/repo');
-      process.getuid = originalGetuid;
+      try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore simulating Windows where getuid is undefined
+        process.getuid = undefined;
+        createLocalStorageProvider('/cache', 'owner', 'repo');
+        expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith('/cache/uid-0/owner/repo');
+      } finally {
+        process.getuid = originalGetuid;
+      }
     });
   });
 
