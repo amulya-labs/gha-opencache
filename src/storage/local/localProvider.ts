@@ -18,14 +18,21 @@ function checkBaseDirWritable(basePath: string): void {
   } catch (err) {
     const error = err as NodeJS.ErrnoException;
     if (error.code === 'EACCES' || error.code === 'EPERM') {
+      const isWin = process.platform === 'win32';
+      const fixCmd = isWin
+        ? `icacls "${basePath}" /grant %USERNAME%:W`
+        : `sudo chown -R $(whoami) "${basePath}"`;
+      const envCmd = isWin
+        ? 'set OPENCACHE_PATH=/path/with/write/access'
+        : 'export OPENCACHE_PATH=/path/with/write/access';
       throw new Error(
         `Cannot write to cache base directory: ${basePath}\n\n` +
           `This usually means a container job (running as root) previously created\n` +
           `this directory, and a non-container job is now trying to use it.\n\n` +
           `Fix — run once on your runner host:\n` +
-          `  sudo chown -R $(whoami) ${basePath}\n\n` +
+          `  ${fixCmd}\n\n` +
           `Or point to a directory the runner user already owns:\n` +
-          `  export OPENCACHE_PATH=/home/runner/.cache/gha-opencache`
+          `  ${envCmd}`
       );
     }
     throw err;

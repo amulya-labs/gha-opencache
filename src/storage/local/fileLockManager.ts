@@ -32,14 +32,21 @@ export class FileLockManager implements LockManager {
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
       if (error.code === 'EACCES' || error.code === 'EPERM') {
+        const isWin = process.platform === 'win32';
+        const fixCmd = isWin
+          ? `icacls "${dir}" /grant %USERNAME%:W`
+          : `sudo chown -R $(whoami) "${dir}"`;
+        const envCmd = isWin
+          ? 'set OPENCACHE_PATH=/path/with/write/access'
+          : 'export OPENCACHE_PATH=/path/with/write/access';
         throw new Error(
           `Permission denied acquiring lock at ${this.lockPath}\n\n` +
             `The cache directory exists but is not writable by the current user.\n` +
             `This can happen if a different user (e.g. root in a container) created it.\n\n` +
             `Fix — run once on your runner host:\n` +
-            `  sudo chown -R $(whoami) ${dir}\n\n` +
+            `  ${fixCmd}\n\n` +
             `Or point to a directory the runner user already owns:\n` +
-            `  export OPENCACHE_PATH=/home/runner/.cache/gha-opencache`
+            `  ${envCmd}`
         );
       }
       throw err;

@@ -60,12 +60,13 @@ describe('FileLockManager', () => {
       );
     });
 
-    it('error message for EACCES includes chown fix instructions', async () => {
+    it('error message for EACCES includes platform-appropriate fix instructions', async () => {
       const eaccesError = Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
       mockLockfile.lock.mockRejectedValue(eaccesError);
       const manager = new FileLockManager(lockPath);
 
-      await expect(manager.withLock(() => Promise.resolve())).rejects.toThrow(/chown/);
+      const fixPattern = process.platform === 'win32' ? /icacls.*\/grant/ : /chown/;
+      await expect(manager.withLock(() => Promise.resolve())).rejects.toThrow(fixPattern);
     });
 
     it('propagates non-permission errors unchanged', async () => {

@@ -100,11 +100,12 @@ describe('LocalStorageProvider', () => {
         throw eaccesError;
       });
 
+      const fixPattern = process.platform === 'win32' ? /icacls.*\/grant/ : /chown.*\$\(whoami\)/;
       expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
         /Cannot write to cache base directory: \/srv\/gha-cache/
       );
       expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
-        /chown.*\$\(whoami\)/
+        fixPattern
       );
       expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
         /OPENCACHE_PATH/
