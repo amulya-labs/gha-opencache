@@ -32,7 +32,6 @@ export class FileLockManager implements LockManager {
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
       if (error.code === 'EACCES' || error.code === 'EPERM') {
-        const dir = path.dirname(this.lockPath);
         throw new Error(
           `Permission denied acquiring lock at ${this.lockPath}\n\n` +
           `The cache directory exists but is not writable by the current user.\n` +
