@@ -87,6 +87,73 @@ describe('LocalStorageProvider', () => {
     jest.clearAllMocks();
   });
 
+  describe('startup write-access check', () => {
+    beforeEach(() => {
+      mockFs.existsSync.mockReturnValue(false);
+      mockFs.accessSync.mockReturnValue(undefined);
+    });
+
+    it('throws clear error with path and fix commands when basePath exists but is not writable', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const eaccesError = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      mockFs.accessSync.mockImplementation(() => {
+        throw eaccesError;
+      });
+
+      const fixPattern = process.platform === 'win32' ? /icacls.*\/grant/ : /chown.*\$\(whoami\)/;
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        /Cannot write to cache base directory: \/srv\/gha-cache/
+      );
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        fixPattern
+      );
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        /OPENCACHE_PATH/
+      );
+    });
+
+    it('also throws for EPERM errors', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const epermError = Object.assign(new Error('EPERM'), { code: 'EPERM' });
+      mockFs.accessSync.mockImplementation(() => {
+        throw epermError;
+      });
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        /Cannot write to cache base directory/
+      );
+    });
+
+    it('rethrows non-permission errors unchanged', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const ioError = Object.assign(new Error('I/O error'), { code: 'EIO' });
+      mockFs.accessSync.mockImplementation(() => {
+        throw ioError;
+      });
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        'I/O error'
+      );
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).not.toThrow(
+        /Cannot write to cache base directory/
+      );
+    });
+
+    it('does not throw when basePath exists and is writable', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.accessSync.mockReturnValue(undefined);
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).not.toThrow();
+    });
+
+    it('does not check access when basePath does not exist', () => {
+      mockFs.existsSync.mockReturnValue(false);
+
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).not.toThrow();
+      expect(mockFs.accessSync).not.toHaveBeenCalled();
+    });
+  });
+
   describe('createLocalStorageProvider', () => {
     it('creates provider', () => {
       const provider = createLocalStorageProvider('/cache', 'owner', 'repo');
@@ -101,6 +168,25 @@ describe('LocalStorageProvider', () => {
       });
 
       expect(provider).toBeInstanceOf(LocalStorageProvider);
+    });
+
+    it('includes uid segment in cacheDir path', () => {
+      const uid = process.getuid?.() ?? 0;
+      createLocalStorageProvider('/cache', 'owner', 'repo');
+      expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith(`/cache/uid-${uid}/owner/repo`);
+    });
+
+    it('uses uid-0 on platforms without process.getuid', () => {
+      const originalGetuid = process.getuid;
+      try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore simulating Windows where getuid is undefined
+        process.getuid = undefined;
+        createLocalStorageProvider('/cache', 'owner', 'repo');
+        expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith('/cache/uid-0/owner/repo');
+      } finally {
+        process.getuid = originalGetuid;
+      }
     });
   });
 

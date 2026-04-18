@@ -11,6 +11,34 @@ import { createArchive, extractArchive } from '../../archive/tar';
 import { CompressionOptions } from '../../archive/compression';
 import { entryToManifest, writeManifest, deleteManifest } from './manifestStore';
 
+function checkBaseDirWritable(basePath: string): void {
+  if (!fs.existsSync(basePath)) return;
+  try {
+    fs.accessSync(basePath, fs.constants.W_OK);
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException;
+    if (error.code === 'EACCES' || error.code === 'EPERM') {
+      const isWin = process.platform === 'win32';
+      const fixCmd = isWin
+        ? `icacls "${basePath}" /grant %USERNAME%:W`
+        : `sudo chown -R $(whoami) "${basePath}"`;
+      const envCmd = isWin
+        ? 'set OPENCACHE_PATH=/path/with/write/access'
+        : 'export OPENCACHE_PATH=/path/with/write/access';
+      throw new Error(
+        `Cannot write to cache base directory: ${basePath}\n\n` +
+          `This usually means a container job (running as root) previously created\n` +
+          `this directory, and a non-container job is now trying to use it.\n\n` +
+          `Fix — run once on your runner host:\n` +
+          `  ${fixCmd}\n\n` +
+          `Or point to a directory the runner user already owns:\n` +
+          `  ${envCmd}`
+      );
+    }
+    throw err;
+  }
+}
+
 /**
  * Options for local storage provider
  */
@@ -27,7 +55,10 @@ export class LocalStorageProvider extends BaseStorageProvider implements Storage
   private readonly localBackend: LocalStorageBackend;
 
   constructor(basePath: string, owner: string, repo: string, options: LocalStorageOptions = {}) {
-    const cacheDir = path.join(basePath, owner, repo);
+    checkBaseDirWritable(basePath);
+
+    const uid = process.getuid?.() ?? 0;
+    const cacheDir = path.join(basePath, `uid-${uid}`, owner, repo);
     const localBackend = createLocalStorageBackend(cacheDir);
     const indexStore = createFileIndexStore(cacheDir);
     const lockManager = createFileLockManager(cacheDir);
