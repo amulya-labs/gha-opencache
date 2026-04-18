@@ -26,7 +26,23 @@ export class FileLockManager implements LockManager {
       fs.writeFileSync(this.lockPath, '');
     }
 
-    const release = await lockfile.lock(this.lockPath, LOCK_OPTIONS);
+    let release: () => Promise<void>;
+    try {
+      release = await lockfile.lock(this.lockPath, LOCK_OPTIONS);
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === 'EACCES' || error.code === 'EPERM') {
+        const dir = path.dirname(this.lockPath);
+        throw new Error(
+          `Permission denied acquiring lock at ${this.lockPath}\n\n` +
+            `To fix this, run on your runner host:\n` +
+            `  sudo chown -R $(whoami) ${dir}\n\n` +
+            `Or set OPENCACHE_PATH to a directory the runner user can write to:\n` +
+            `  export OPENCACHE_PATH=/path/with/write/access`
+        );
+      }
+      throw err;
+    }
 
     try {
       return await fn();
