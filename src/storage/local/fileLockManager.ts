@@ -35,10 +35,12 @@ export class FileLockManager implements LockManager {
         const dir = path.dirname(this.lockPath);
         throw new Error(
           `Permission denied acquiring lock at ${this.lockPath}\n\n` +
-            `To fix this, run on your runner host:\n` +
-            `  sudo chown -R $(whoami) ${dir}\n\n` +
-            `Or set OPENCACHE_PATH to a directory the runner user can write to:\n` +
-            `  export OPENCACHE_PATH=/path/with/write/access`
+          `The cache directory exists but is not writable by the current user.\n` +
+          `This can happen if a different user (e.g. root in a container) created it.\n\n` +
+          `Fix — run once on your runner host:\n` +
+          `  sudo chown -R $(whoami) ${dir}\n\n` +
+          `Or point to a directory the runner user already owns:\n` +
+          `  export OPENCACHE_PATH=/home/runner/.cache/gha-opencache`
         );
       }
       throw err;
