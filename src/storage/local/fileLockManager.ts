@@ -34,12 +34,12 @@ export class FileLockManager implements LockManager {
       if (error.code === 'EACCES' || error.code === 'EPERM') {
         throw new Error(
           `Permission denied acquiring lock at ${this.lockPath}\n\n` +
-          `The cache directory exists but is not writable by the current user.\n` +
-          `This can happen if a different user (e.g. root in a container) created it.\n\n` +
-          `Fix — run once on your runner host:\n` +
-          `  sudo chown -R $(whoami) ${dir}\n\n` +
-          `Or point to a directory the runner user already owns:\n` +
-          `  export OPENCACHE_PATH=/home/runner/.cache/gha-opencache`
+            `The cache directory exists but is not writable by the current user.\n` +
+            `This can happen if a different user (e.g. root in a container) created it.\n\n` +
+            `Fix — run once on your runner host:\n` +
+            `  sudo chown -R $(whoami) ${dir}\n\n` +
+            `Or point to a directory the runner user already owns:\n` +
+            `  export OPENCACHE_PATH=/home/runner/.cache/gha-opencache`
         );
       }
       throw err;

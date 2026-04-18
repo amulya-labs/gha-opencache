@@ -47,7 +47,9 @@ describe('FileLockManager', () => {
 
     it('throws helpful error with fix instructions when lock acquisition is permission denied', async () => {
       const eaccesError = Object.assign(
-        new Error('EACCES: permission denied, mkdir \'/srv/gha-cache/praxiom-systems/stock-trading/index.json.lock.lock\''),
+        new Error(
+          "EACCES: permission denied, mkdir '/srv/gha-cache/praxiom-systems/stock-trading/index.json.lock.lock'"
+        ),
         { code: 'EACCES' }
       );
       mockLockfile.lock.mockRejectedValue(eaccesError);

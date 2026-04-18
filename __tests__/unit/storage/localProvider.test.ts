@@ -96,7 +96,9 @@ describe('LocalStorageProvider', () => {
     it('throws clear error with path and fix commands when basePath exists but is not writable', () => {
       mockFs.existsSync.mockReturnValue(true);
       const eaccesError = Object.assign(new Error('EACCES'), { code: 'EACCES' });
-      mockFs.accessSync.mockImplementation(() => { throw eaccesError; });
+      mockFs.accessSync.mockImplementation(() => {
+        throw eaccesError;
+      });
 
       expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
         /Cannot write to cache base directory: \/srv\/gha-cache/
@@ -112,7 +114,9 @@ describe('LocalStorageProvider', () => {
     it('also throws for EPERM errors', () => {
       mockFs.existsSync.mockReturnValue(true);
       const epermError = Object.assign(new Error('EPERM'), { code: 'EPERM' });
-      mockFs.accessSync.mockImplementation(() => { throw epermError; });
+      mockFs.accessSync.mockImplementation(() => {
+        throw epermError;
+      });
 
       expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
         /Cannot write to cache base directory/
@@ -122,9 +126,13 @@ describe('LocalStorageProvider', () => {
     it('rethrows non-permission errors unchanged', () => {
       mockFs.existsSync.mockReturnValue(true);
       const ioError = Object.assign(new Error('I/O error'), { code: 'EIO' });
-      mockFs.accessSync.mockImplementation(() => { throw ioError; });
+      mockFs.accessSync.mockImplementation(() => {
+        throw ioError;
+      });
 
-      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow('I/O error');
+      expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).toThrow(
+        'I/O error'
+      );
       expect(() => createLocalStorageProvider('/srv/gha-cache', 'owner', 'repo')).not.toThrow(
         /Cannot write to cache base directory/
       );
@@ -164,9 +172,7 @@ describe('LocalStorageProvider', () => {
     it('includes uid segment in cacheDir path', () => {
       const uid = process.getuid?.() ?? 0;
       createLocalStorageProvider('/cache', 'owner', 'repo');
-      expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith(
-        `/cache/uid-${uid}/owner/repo`
-      );
+      expect(mockCreateLocalStorageBackend).toHaveBeenCalledWith(`/cache/uid-${uid}/owner/repo`);
     });
 
     it('uses uid-0 on platforms without process.getuid', () => {
